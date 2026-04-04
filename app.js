@@ -1164,60 +1164,152 @@ function initEditorPage() {
 
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 15;
-      const maxWidth = pageWidth - margin * 2;
-      let y = 20;
+      const margin = 18;
+      const contentWidth = pageWidth - (margin * 2);
+      let y = 24;
+      let pageNumber = 1;
+
+      const ensureSpace = (needed = 10) => {
+        if (y + needed <= pageHeight - 18) return;
+        drawFooter(pageNumber);
+        doc.addPage();
+        pageNumber += 1;
+        y = 24;
+      };
+
+      const drawFooter = (pageNo) => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(120);
+        doc.text('Created with PeeyashBooks', margin, pageHeight - 10);
+        doc.text(`Page ${pageNo}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+      };
+
+      const addWrappedText = (text, opts = {}) => {
+        const {
+          font = 'helvetica',
+          style = 'normal',
+          size = 12,
+          color = [35, 35, 35],
+          gapAfter = 6,
+          indent = 0
+        } = opts;
+
+        const clean = String(text || '').replace(/\s+/g, ' ').trim();
+        if (!clean) {
+          y += gapAfter;
+          return;
+        }
+
+        doc.setFont(font, style);
+        doc.setFontSize(size);
+        doc.setTextColor(...color);
+
+        const lines = doc.splitTextToSize(clean, contentWidth - indent);
+        const lineHeight = size >= 18 ? 8 : size >= 14 ? 7 : 6.2;
+        ensureSpace(lines.length * lineHeight + gapAfter);
+        doc.text(lines, margin + indent, y);
+        y += (lines.length * lineHeight) + gapAfter;
+      };
+
+      const addDivider = () => {
+        ensureSpace(8);
+        doc.setDrawColor(124, 92, 255);
+        doc.setLineWidth(0.8);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 8;
+      };
 
       const title = payload.title || 'Untitled ebook';
       const author = payload.author || 'Anonymous Author';
 
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(20);
-      const titleLines = doc.splitTextToSize(title, maxWidth);
-      doc.text(titleLines, margin, y);
-      y += titleLines.length * 8;
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-      doc.text(`by ${author}`, margin, y);
-      y += 10;
-
-      const rawLines = exportText
-        .replace(/\r/g, '')
-        .split('\n')
-        .flatMap((line) => {
-          const trimmed = line.trim();
-          if (!trimmed) return [''];
-          return doc.splitTextToSize(trimmed, maxWidth);
-        });
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
-
-      rawLines.forEach((line) => {
-        if (y > pageHeight - 18) {
-          doc.addPage();
-          y = 20;
-        }
-        if (line === '') {
-          y += 5;
-        } else {
-          doc.text(line, margin, y);
-          y += 7;
-        }
+      addWrappedText(title, {
+        style: 'bold',
+        size: 24,
+        color: [15, 23, 42],
+        gapAfter: 5
       });
 
-      const footerText = 'Created with PeeyashBooks';
-      const footerY = pageHeight - 10;
-      const pageCount = doc.getNumberOfPages();
+      addWrappedText(`by ${author}`, {
+        size: 12,
+        color: [90, 90, 90],
+        gapAfter: 8
+      });
 
-      for (let i = 1; i <= pageCount; i += 1) {
-        doc.setPage(i);
-        doc.setFontSize(10);
-        doc.setTextColor(120);
-        doc.text(footerText, margin, footerY);
-      }
+      addDivider();
 
+      const parser = document.createElement('div');
+      parser.innerHTML = exportHtml;
+
+      const walkNode = (node) => {
+        if (!node) return;
+
+        if (node.nodeType === Node.TEXT_NODE) {
+          const text = node.textContent.replace(/\s+/g, ' ').trim();
+          if (text) addWrappedText(text, { size: 12, gapAfter: 5 });
+          return;
+        }
+
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+        const tag = node.tagName.toLowerCase();
+        const text = utils.stripHtml(node.innerHTML || '').replace(/\s+/g, ' ').trim();
+
+        if (tag === 'h1') {
+          addWrappedText(text, { style: 'bold', size: 20, color: [15, 23, 42], gapAfter: 6 });
+          return;
+        }
+
+        if (tag === 'h2') {
+          ensureSpace(14);
+          addWrappedText(text, { style: 'bold', size: 16, color: [31, 41, 55], gapAfter: 5 });
+          return;
+        }
+
+        if (tag === 'h3' || tag === 'h4') {
+          ensureSpace(12);
+          addWrappedText(text, { style: 'bold', size: 13, color: [31, 41, 55], gapAfter: 4 });
+          return;
+        }
+
+        if (tag === 'p') {
+          addWrappedText(text, { size: 12, color: [45, 45, 45], gapAfter: 6 });
+          return;
+        }
+
+        if (tag === 'ul' || tag === 'ol') {
+          const items = Array.from(node.children).filter((child) => child.tagName && child.tagName.toLowerCase() === 'li');
+          items.forEach((item, index) => {
+            const bullet = tag === 'ol' ? `${index + 1}.` : '•';
+            const itemText = utils.stripHtml(item.innerHTML || '').replace(/\s+/g, ' ').trim();
+            addWrappedText(`${bullet} ${itemText}`, { size: 12, color: [45, 45, 45], gapAfter: 4, indent: 2 });
+          });
+          y += 2;
+          return;
+        }
+
+        if (tag === 'blockquote') {
+          ensureSpace(10);
+          doc.setDrawColor(210, 210, 210);
+          doc.setLineWidth(0.6);
+          doc.line(margin, y, margin, y + 10);
+          addWrappedText(text, { size: 12, color: [70, 70, 70], gapAfter: 6, indent: 4 });
+          return;
+        }
+
+        if (tag === 'div' || tag === 'section' || tag === 'article') {
+          Array.from(node.childNodes).forEach(walkNode);
+          return;
+        }
+
+        if (text) {
+          addWrappedText(text, { size: 12, color: [45, 45, 45], gapAfter: 5 });
+        }
+      };
+
+      Array.from(parser.childNodes).forEach(walkNode);
+
+      drawFooter(pageNumber);
       doc.save(`${utils.slugify(title) || 'peeyashbooks-export'}.pdf`);
 
       utils.toast('PDF export complete.');
@@ -1235,7 +1327,6 @@ function initEditorPage() {
 }
 
 function initReaderPage() {
-
   const title = document.getElementById('readerTitle');
   const author = document.getElementById('readerAuthor');
   const content = document.getElementById('readerContent');
