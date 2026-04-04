@@ -345,8 +345,6 @@ function initEditorPage() {
     }
   }
 
-
-
   function setOutlineStatus(message, tone = 'default') {
     if (!outlineStatus) return;
     outlineStatus.textContent = message;
@@ -592,7 +590,6 @@ function initEditorPage() {
     return html || '<p>No outline generated yet.</p>';
   }
 
-
   function buildOutlineSummary(outlinePackage) {
     return `
       <div class="ai-summary-meta">${outlinePackage.chapters.length} chapters • ${outlinePackage.profile.genre}</div>
@@ -711,7 +708,6 @@ function initEditorPage() {
     utils.toast('New AI chapter added to your draft.');
   }
 
-
   function setPreviewContent(kind, html, options = {}) {
     latestGeneratedKind = kind;
     latestGeneratedHtml = html;
@@ -721,7 +717,6 @@ function initEditorPage() {
     if (aiPreviewNote) aiPreviewNote.textContent = options.note || 'Review everything here first, then insert it into the editor only if it fits your draft.';
     if (aiPreviewOutput) aiPreviewOutput.innerHTML = html;
   }
-
 
   async function requestAssistant(action, payload = {}) {
     const response = await fetch('/api/assistant', {
@@ -917,6 +912,7 @@ function initEditorPage() {
       utils.resetButtonState(generateWritingBtn);
     }
   }
+
   function deleteChapter(index) {
     if (currentDraft.chapters.length === 1) {
       utils.toast('You must keep at least one chapter.');
@@ -1144,9 +1140,10 @@ function initEditorPage() {
     syncActiveChapterFromEditor();
     const payload = draftPayload();
     const editorHtml = quill.root.innerHTML || '';
-    const editorText = utils.stripHtml(editorHtml).trim();
+    const exportHtml = (payload.content || editorHtml || '').trim();
+    const exportText = utils.stripHtml(exportHtml).trim();
 
-    if (!editorText) {
+    if (!exportText) {
       utils.toast('Nothing to export yet. Write something first.');
       return;
     }
@@ -1157,17 +1154,17 @@ function initEditorPage() {
     const exportNode = document.createElement('div');
     exportNode.className = 'export-sheet export-sheet-render';
     exportNode.setAttribute('aria-hidden', 'true');
-    exportNode.style.position = 'fixed';
-    exportNode.style.left = '0';
+    exportNode.style.position = 'absolute';
+    exportNode.style.left = '-10000px';
     exportNode.style.top = '0';
-    exportNode.style.zIndex = '9999';
+    exportNode.style.zIndex = '-1';
     exportNode.style.pointerEvents = 'none';
     exportNode.style.opacity = '1';
 
     exportNode.innerHTML = `
       <h1>${payload.title}</h1>
       <div class="author">by ${payload.author}</div>
-      <div class="export-body">${payload.content || editorHtml}</div>
+      <div class="export-body">${exportHtml}</div>
       <div class="export-footer">Created with PeeyashBooks</div>
     `;
     document.body.appendChild(exportNode);
@@ -1233,4 +1230,3 @@ initGlobalEffects();
 if (page === 'home') initHomePage();
 if (page === 'editor') initEditorPage();
 if (page === 'reader') initReaderPage();
-
