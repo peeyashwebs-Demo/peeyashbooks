@@ -1,8 +1,0 @@
-{
-  "name": "peeyashbooks",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "openai": "^6.2.0"
-  }
-}
