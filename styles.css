@@ -1270,3 +1270,12 @@ button { cursor: pointer; }
   width: 100%;
   justify-content: center;
 }
+
+
+.export-sheet-render {
+  background: white;
+  padding: 40px;
+}
+.export-sheet-render * {
+  color: #111 !important;
+}
