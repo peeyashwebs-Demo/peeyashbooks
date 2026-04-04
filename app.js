@@ -345,6 +345,8 @@ function initEditorPage() {
     }
   }
 
+
+
   function setOutlineStatus(message, tone = 'default') {
     if (!outlineStatus) return;
     outlineStatus.textContent = message;
@@ -590,6 +592,7 @@ function initEditorPage() {
     return html || '<p>No outline generated yet.</p>';
   }
 
+
   function buildOutlineSummary(outlinePackage) {
     return `
       <div class="ai-summary-meta">${outlinePackage.chapters.length} chapters • ${outlinePackage.profile.genre}</div>
@@ -708,6 +711,7 @@ function initEditorPage() {
     utils.toast('New AI chapter added to your draft.');
   }
 
+
   function setPreviewContent(kind, html, options = {}) {
     latestGeneratedKind = kind;
     latestGeneratedHtml = html;
@@ -717,6 +721,7 @@ function initEditorPage() {
     if (aiPreviewNote) aiPreviewNote.textContent = options.note || 'Review everything here first, then insert it into the editor only if it fits your draft.';
     if (aiPreviewOutput) aiPreviewOutput.innerHTML = html;
   }
+
 
   async function requestAssistant(action, payload = {}) {
     const response = await fetch('/api/assistant', {
@@ -912,7 +917,6 @@ function initEditorPage() {
       utils.resetButtonState(generateWritingBtn);
     }
   }
-
   function deleteChapter(index) {
     if (currentDraft.chapters.length === 1) {
       utils.toast('You must keep at least one chapter.');
@@ -1168,14 +1172,14 @@ function initEditorPage() {
       const contentWidth = pageWidth - (margin * 2);
       let y = 24;
       let pageNumber = 1;
+      let lastHeadingKey = '';
 
-      const ensureSpace = (needed = 10) => {
-        if (y + needed <= pageHeight - 18) return;
-        drawFooter(pageNumber);
-        doc.addPage();
-        pageNumber += 1;
-        y = 24;
-      };
+      const normalizeKey = (text = '') =>
+        String(text)
+          .toLowerCase()
+          .replace(/\s+/g, ' ')
+          .replace(/[^a-z0-9: ]/g, '')
+          .trim();
 
       const drawFooter = (pageNo) => {
         doc.setFont('helvetica', 'normal');
@@ -1183,6 +1187,14 @@ function initEditorPage() {
         doc.setTextColor(120);
         doc.text('Created with PeeyashBooks', margin, pageHeight - 10);
         doc.text(`Page ${pageNo}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+      };
+
+      const ensureSpace = (needed = 10) => {
+        if (y + needed <= pageHeight - 18) return;
+        drawFooter(pageNumber);
+        doc.addPage();
+        pageNumber += 1;
+        y = 24;
       };
 
       const addWrappedText = (text, opts = {}) => {
@@ -1206,8 +1218,8 @@ function initEditorPage() {
         doc.setTextColor(...color);
 
         const lines = doc.splitTextToSize(clean, contentWidth - indent);
-        const lineHeight = size >= 18 ? 8 : size >= 14 ? 7 : 6.2;
-        ensureSpace(lines.length * lineHeight + gapAfter);
+        const lineHeight = size >= 22 ? 9 : size >= 18 ? 8 : size >= 15 ? 7.2 : 6.2;
+        ensureSpace((lines.length * lineHeight) + gapAfter);
         doc.text(lines, margin + indent, y);
         y += (lines.length * lineHeight) + gapAfter;
       };
@@ -1241,39 +1253,46 @@ function initEditorPage() {
       const parser = document.createElement('div');
       parser.innerHTML = exportHtml;
 
+      const addHeading = (text, size, gapAfter = 5) => {
+        const key = normalizeKey(text);
+        if (!key || key === lastHeadingKey) return;
+        lastHeadingKey = key;
+        ensureSpace(size >= 16 ? 16 : 12);
+        addWrappedText(text, {
+          style: 'bold',
+          size,
+          color: [31, 41, 55],
+          gapAfter
+        });
+      };
+
       const walkNode = (node) => {
-        if (!node) return;
-
-        if (node.nodeType === Node.TEXT_NODE) {
-          const text = node.textContent.replace(/\s+/g, ' ').trim();
-          if (text) addWrappedText(text, { size: 12, gapAfter: 5 });
-          return;
-        }
-
-        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        if (!node || node.nodeType !== Node.ELEMENT_NODE) return;
 
         const tag = node.tagName.toLowerCase();
         const text = utils.stripHtml(node.innerHTML || '').replace(/\s+/g, ' ').trim();
 
         if (tag === 'h1') {
-          addWrappedText(text, { style: 'bold', size: 20, color: [15, 23, 42], gapAfter: 6 });
+          addHeading(text, 20, 6);
           return;
         }
 
         if (tag === 'h2') {
-          ensureSpace(14);
-          addWrappedText(text, { style: 'bold', size: 16, color: [31, 41, 55], gapAfter: 5 });
+          addHeading(text, 16, 5);
           return;
         }
 
         if (tag === 'h3' || tag === 'h4') {
-          ensureSpace(12);
-          addWrappedText(text, { style: 'bold', size: 13, color: [31, 41, 55], gapAfter: 4 });
+          addHeading(text, 13, 4);
           return;
         }
 
         if (tag === 'p') {
-          addWrappedText(text, { size: 12, color: [45, 45, 45], gapAfter: 6 });
+          addWrappedText(text, {
+            size: 12,
+            color: [45, 45, 45],
+            gapAfter: 7
+          });
           return;
         }
 
@@ -1282,32 +1301,55 @@ function initEditorPage() {
           items.forEach((item, index) => {
             const bullet = tag === 'ol' ? `${index + 1}.` : '•';
             const itemText = utils.stripHtml(item.innerHTML || '').replace(/\s+/g, ' ').trim();
-            addWrappedText(`${bullet} ${itemText}`, { size: 12, color: [45, 45, 45], gapAfter: 4, indent: 2 });
+            addWrappedText(`${bullet} ${itemText}`, {
+              size: 12,
+              color: [45, 45, 45],
+              gapAfter: 4,
+              indent: 2
+            });
           });
           y += 2;
           return;
         }
 
         if (tag === 'blockquote') {
-          ensureSpace(10);
+          const quoteText = utils.stripHtml(node.innerHTML || '').replace(/\s+/g, ' ').trim();
+          ensureSpace(12);
           doc.setDrawColor(210, 210, 210);
           doc.setLineWidth(0.6);
           doc.line(margin, y, margin, y + 10);
-          addWrappedText(text, { size: 12, color: [70, 70, 70], gapAfter: 6, indent: 4 });
+          addWrappedText(quoteText, {
+            size: 12,
+            color: [70, 70, 70],
+            gapAfter: 6,
+            indent: 4
+          });
           return;
         }
 
         if (tag === 'div' || tag === 'section' || tag === 'article') {
-          Array.from(node.childNodes).forEach(walkNode);
+          Array.from(node.childNodes).forEach((child) => {
+            if (child.nodeType === Node.ELEMENT_NODE) {
+              walkNode(child);
+            }
+          });
           return;
         }
 
         if (text) {
-          addWrappedText(text, { size: 12, color: [45, 45, 45], gapAfter: 5 });
+          addWrappedText(text, {
+            size: 12,
+            color: [45, 45, 45],
+            gapAfter: 6
+          });
         }
       };
 
-      Array.from(parser.childNodes).forEach(walkNode);
+      Array.from(parser.childNodes).forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          walkNode(node);
+        }
+      });
 
       drawFooter(pageNumber);
       doc.save(`${utils.slugify(title) || 'peeyashbooks-export'}.pdf`);
@@ -1356,3 +1398,4 @@ initGlobalEffects();
 if (page === 'home') initHomePage();
 if (page === 'editor') initEditorPage();
 if (page === 'reader') initReaderPage();
+
