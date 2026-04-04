@@ -1232,6 +1232,8 @@ function initEditorPage() {
     }
   });
 
+}
+
 function initReaderPage() {
 
   const title = document.getElementById('readerTitle');

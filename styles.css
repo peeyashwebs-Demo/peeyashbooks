@@ -1270,33 +1270,3 @@ button { cursor: pointer; }
   width: 100%;
   justify-content: center;
 }
-
-
-/* PDF export rendering fix */
-.export-sheet-render {
-  visibility: visible;
-  display: block;
-  width: 780px;
-  max-width: 780px;
-  background: #ffffff !important;
-  color: #111827 !important;
-  box-shadow: none !important;
-}
-.export-sheet-render * {
-  color: #111827 !important;
-}
-.export-sheet-render .author,
-.export-sheet-render p,
-.export-sheet-render li {
-  color: #1f2937 !important;
-}
-.export-sheet-render h1,
-.export-sheet-render h2,
-.export-sheet-render h3,
-.export-sheet-render h4 {
-  color: #111827 !important;
-  page-break-after: avoid;
-}
-.export-sheet-render .export-body {
-  color: #111827 !important;
-}
