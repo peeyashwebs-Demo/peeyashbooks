@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/read/(.*)",
-      "destination": "/reader.html?slug=$1"
-    }
-  ]
-}
