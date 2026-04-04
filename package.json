@@ -1,8 +1,0 @@
-{
-  "name": "peeyashbooks",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "@google/genai": "^1.16.0"
-  }
-}
