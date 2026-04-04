@@ -1141,7 +1141,16 @@ function initEditorPage() {
   downloadBtn?.addEventListener('click', () => utils.openModal('exportModal'));
 
   confirmExportBtn?.addEventListener('click', async () => {
+    syncActiveChapterFromEditor();
     const payload = draftPayload();
+    const editorHtml = quill.root.innerHTML || '';
+    const editorText = utils.stripHtml(editorHtml).trim();
+
+    if (!editorText) {
+      utils.toast('Nothing to export yet. Write something first.');
+      return;
+    }
+
     utils.setButtonState(confirmExportBtn, 'Generating PDF…');
     setSaveState('Generating PDF…', 'active');
 
@@ -1158,7 +1167,7 @@ function initEditorPage() {
     exportNode.innerHTML = `
       <h1>${payload.title}</h1>
       <div class="author">by ${payload.author}</div>
-      <div class="export-body">${payload.content}</div>
+      <div class="export-body">${payload.content || editorHtml}</div>
       <div class="export-footer">Created with PeeyashBooks</div>
     `;
     document.body.appendChild(exportNode);
