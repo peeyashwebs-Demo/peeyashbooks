@@ -1140,7 +1140,58 @@ function initEditorPage() {
 
   downloadBtn?.addEventListener('click', () => utils.openModal('exportModal'));
 
-  
+  confirmExportBtn?.addEventListener('click', async () => {
+    const payload = draftPayload();
+    utils.setButtonState(confirmExportBtn, 'Generating PDF…');
+    setSaveState('Generating PDF…', 'active');
+
+    const exportNode = document.createElement('div');
+    exportNode.className = 'export-sheet export-sheet-render';
+    exportNode.setAttribute('aria-hidden', 'true');
+    exportNode.style.position = 'fixed';
+    exportNode.style.left = '0';
+    exportNode.style.top = '0';
+    exportNode.style.zIndex = '9999';
+    exportNode.style.pointerEvents = 'none';
+    exportNode.style.opacity = '1';
+
+    exportNode.innerHTML = `
+      <h1>${payload.title}</h1>
+      <div class="author">by ${payload.author}</div>
+      <div class="export-body">${payload.content}</div>
+      <div class="export-footer">Created with PeeyashBooks</div>
+    `;
+    document.body.appendChild(exportNode);
+
+    const options = {
+      margin: [10, 10, 14, 10],
+      filename: `${utils.slugify(payload.title) || 'peeyashbooks-export'}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] }
+    };
+
+    try {
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await html2pdf().set(options).from(exportNode).save();
+      utils.toast('PDF export complete.');
+      utils.closeModal('exportModal');
+      setSaveState('Saved', 'success');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      utils.toast('PDF export could not be completed. Please try again.');
+      setSaveState('Saved', 'default');
+    } finally {
+      exportNode.remove();
+      utils.resetButtonState(confirmExportBtn);
+    }
+  });
 }
 
 function initReaderPage() {
@@ -1174,43 +1225,3 @@ if (page === 'home') initHomePage();
 if (page === 'editor') initEditorPage();
 if (page === 'reader') initReaderPage();
 
-
-
-confirmExportBtn?.addEventListener('click', async () => {
-  const payload = draftPayload();
-
-  const exportNode = document.createElement('div');
-  exportNode.className = 'export-sheet export-sheet-render';
-
-  exportNode.style.position = 'fixed';
-  exportNode.style.left = '0';
-  exportNode.style.top = '0';
-  exportNode.style.zIndex = '9999';
-  exportNode.style.opacity = '1';
-  exportNode.style.pointerEvents = 'none';
-
-  exportNode.innerHTML = `
-    <h1>${payload.title}</h1>
-    <div class="author">by ${payload.author}</div>
-    <div>${payload.content}</div>
-    <div class="export-footer">Created with PeeyashBooks</div>
-  `;
-
-  document.body.appendChild(exportNode);
-
-  const options = {
-    margin: [10, 10, 14, 10],
-    filename: `${utils.slugify(payload.title) || 'peeyashbooks-export'}.pdf`,
-    html2canvas: { scale: 2, backgroundColor: '#ffffff' },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  };
-
-  try {
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-    await html2pdf().set(options).from(exportNode).save();
-  } catch (e) {
-    console.error(e);
-  } finally {
-    exportNode.remove();
-  }
-});
