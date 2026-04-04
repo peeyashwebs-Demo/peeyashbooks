@@ -1139,8 +1139,7 @@ function initEditorPage() {
   confirmExportBtn?.addEventListener('click', async () => {
     syncActiveChapterFromEditor();
     const payload = draftPayload();
-    const editorHtml = quill.root.innerHTML || '';
-    const exportHtml = (payload.content || editorHtml || '').trim();
+    const exportHtml = (payload.content || quill.root.innerHTML || '').trim();
     const exportText = utils.stripHtml(exportHtml).trim();
 
     if (!exportText) {
@@ -1151,41 +1150,76 @@ function initEditorPage() {
     utils.setButtonState(confirmExportBtn, 'Generating PDF…');
     setSaveState('Generating PDF…', 'active');
 
-    const exportNode = document.createElement('div');
-    exportNode.className = 'export-sheet export-sheet-render';
-    exportNode.setAttribute('aria-hidden', 'true');
-    exportNode.style.position = 'absolute';
-    exportNode.style.left = '-10000px';
-    exportNode.style.top = '0';
-    exportNode.style.zIndex = '-1';
-    exportNode.style.pointerEvents = 'none';
-    exportNode.style.opacity = '1';
-
-    exportNode.innerHTML = `
-      <h1>${payload.title}</h1>
-      <div class="author">by ${payload.author}</div>
-      <div class="export-body">${exportHtml}</div>
-      <div class="export-footer">Created with PeeyashBooks</div>
-    `;
-    document.body.appendChild(exportNode);
-
-    const options = {
-      margin: [10, 10, 14, 10],
-      filename: `${utils.slugify(payload.title) || 'peeyashbooks-export'}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['css', 'legacy'] }
-    };
-
     try {
-      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      await html2pdf().set(options).from(exportNode).save();
+      const jsPDFCtor = window.jspdf?.jsPDF;
+      if (!jsPDFCtor) {
+        throw new Error('jsPDF is not loaded.');
+      }
+
+      const doc = new jsPDFCtor({
+        unit: 'mm',
+        format: 'a4',
+        orientation: 'portrait'
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 15;
+      const maxWidth = pageWidth - margin * 2;
+      let y = 20;
+
+      const title = payload.title || 'Untitled ebook';
+      const author = payload.author || 'Anonymous Author';
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(20);
+      const titleLines = doc.splitTextToSize(title, maxWidth);
+      doc.text(titleLines, margin, y);
+      y += titleLines.length * 8;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.text(`by ${author}`, margin, y);
+      y += 10;
+
+      const rawLines = exportText
+        .replace(/\r/g, '')
+        .split('\n')
+        .flatMap((line) => {
+          const trimmed = line.trim();
+          if (!trimmed) return [''];
+          return doc.splitTextToSize(trimmed, maxWidth);
+        });
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(12);
+
+      rawLines.forEach((line) => {
+        if (y > pageHeight - 18) {
+          doc.addPage();
+          y = 20;
+        }
+        if (line === '') {
+          y += 5;
+        } else {
+          doc.text(line, margin, y);
+          y += 7;
+        }
+      });
+
+      const footerText = 'Created with PeeyashBooks';
+      const footerY = pageHeight - 10;
+      const pageCount = doc.getNumberOfPages();
+
+      for (let i = 1; i <= pageCount; i += 1) {
+        doc.setPage(i);
+        doc.setFontSize(10);
+        doc.setTextColor(120);
+        doc.text(footerText, margin, footerY);
+      }
+
+      doc.save(`${utils.slugify(title) || 'peeyashbooks-export'}.pdf`);
+
       utils.toast('PDF export complete.');
       utils.closeModal('exportModal');
       setSaveState('Saved', 'success');
@@ -1194,13 +1228,12 @@ function initEditorPage() {
       utils.toast('PDF export could not be completed. Please try again.');
       setSaveState('Saved', 'default');
     } finally {
-      exportNode.remove();
       utils.resetButtonState(confirmExportBtn);
     }
   });
-}
 
 function initReaderPage() {
+
   const title = document.getElementById('readerTitle');
   const author = document.getElementById('readerAuthor');
   const content = document.getElementById('readerContent');
