@@ -1196,7 +1196,7 @@ function initEditorPage() {
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
+    const margin = 14;
     const contentWidth = pageWidth - (margin * 2);
     let y = 26;
     let pageNumber = 1;
@@ -1268,14 +1268,14 @@ function initEditorPage() {
       y += 10;
     };
 
-    const addParagraph = (text) => {
-      addWrappedText(text, {
-        size: 12,
-        color: [50, 50, 50],
-        gapAfter: 8,
-        lineHeight: 6.8
-      });
-    };
+   const addParagraph = (text) => {
+  addWrappedText(text, {
+    size: 11,
+    color: [50, 50, 50],
+    gapAfter: 5,
+    lineHeight: 6
+  });
+};
 
     const addChapterHeading = (text) => {
       y += 2;
