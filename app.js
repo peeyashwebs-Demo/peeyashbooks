@@ -345,8 +345,6 @@ function initEditorPage() {
     }
   }
 
-
-
   function setOutlineStatus(message, tone = 'default') {
     if (!outlineStatus) return;
     outlineStatus.textContent = message;
@@ -592,7 +590,6 @@ function initEditorPage() {
     return html || '<p>No outline generated yet.</p>';
   }
 
-
   function buildOutlineSummary(outlinePackage) {
     return `
       <div class="ai-summary-meta">${outlinePackage.chapters.length} chapters • ${outlinePackage.profile.genre}</div>
@@ -711,7 +708,6 @@ function initEditorPage() {
     utils.toast('New AI chapter added to your draft.');
   }
 
-
   function setPreviewContent(kind, html, options = {}) {
     latestGeneratedKind = kind;
     latestGeneratedHtml = html;
@@ -721,7 +717,6 @@ function initEditorPage() {
     if (aiPreviewNote) aiPreviewNote.textContent = options.note || 'Review everything here first, then insert it into the editor only if it fits your draft.';
     if (aiPreviewOutput) aiPreviewOutput.innerHTML = html;
   }
-
 
   async function requestAssistant(action, payload = {}) {
     const response = await fetch('/api/assistant', {
@@ -917,6 +912,7 @@ function initEditorPage() {
       utils.resetButtonState(generateWritingBtn);
     }
   }
+
   function deleteChapter(index) {
     if (currentDraft.chapters.length === 1) {
       utils.toast('You must keep at least one chapter.');
@@ -1141,231 +1137,288 @@ function initEditorPage() {
   downloadBtn?.addEventListener('click', () => utils.openModal('exportModal'));
 
   confirmExportBtn?.addEventListener('click', async () => {
-    syncActiveChapterFromEditor();
-    const payload = draftPayload();
-    const exportHtml = (payload.content || quill.root.innerHTML || '').trim();
-    const exportText = utils.stripHtml(exportHtml).trim();
+  syncActiveChapterFromEditor();
+  const payload = draftPayload();
+  const exportHtml = (payload.content || quill.root.innerHTML || '').trim();
+  const exportText = utils.stripHtml(exportHtml).trim();
 
-    if (!exportText) {
-      utils.toast('Nothing to export yet. Write something first.');
-      return;
+  if (!exportText) {
+    utils.toast('Nothing to export yet. Write something first.');
+    return;
+  }
+
+  utils.setButtonState(confirmExportBtn, 'Generating PDF…');
+  setSaveState('Generating PDF…', 'active');
+
+  try {
+    const jsPDFCtor = window.jspdf?.jsPDF;
+    if (!jsPDFCtor) {
+      throw new Error('jsPDF is not loaded.');
     }
 
-    utils.setButtonState(confirmExportBtn, 'Generating PDF…');
-    setSaveState('Generating PDF…', 'active');
+    const doc = new jsPDFCtor({
+      unit: 'mm',
+      format: 'a4',
+      orientation: 'portrait'
+    });
 
-    try {
-      const jsPDFCtor = window.jspdf?.jsPDF;
-      if (!jsPDFCtor) {
-        throw new Error('jsPDF is not loaded.');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 10;
+    const bottomLimit = pageHeight - 20;
+    const contentWidth = pageWidth - (margin * 2);
+    let y = 26;
+    let pageNumber = 1;
+
+    const drawFooter = (pageNo) => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(130);
+      doc.text('Created with PeeyashBooks', margin, pageHeight - 10);
+      doc.text(`Page ${pageNo}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+    };
+
+    const newPage = () => {
+      drawFooter(pageNumber);
+      doc.addPage();
+      pageNumber += 1;
+      y = 26;
+    };
+
+    const estimateWrappedHeight = (text, opts = {}) => {
+      const {
+        size = 12,
+        indent = 0,
+        gapAfter = 6,
+        lineHeight = null
+      } = opts;
+
+      const clean = String(text || '').replace(/\s+/g, ' ').trim();
+      if (!clean) return gapAfter;
+
+      doc.setFontSize(size);
+      const lines = doc.splitTextToSize(clean, contentWidth - indent);
+      const actualLineHeight = lineHeight || (size >= 20 ? 9 : size >= 16 ? 8 : 6.8);
+      return (lines.length * actualLineHeight) + gapAfter;
+    };
+
+    const addWrappedText = (text, opts = {}) => {
+      const {
+        font = 'helvetica',
+        style = 'normal',
+        size = 12,
+        color = [40, 40, 40],
+        gapAfter = 6,
+        indent = 0,
+        lineHeight = null
+      } = opts;
+
+      const clean = String(text || '').replace(/\s+/g, ' ').trim();
+      if (!clean) {
+        y += gapAfter;
+        return;
       }
 
-      const doc = new jsPDFCtor({
-        unit: 'mm',
-        format: 'a4',
-        orientation: 'portrait'
-      });
+      const lines = doc.splitTextToSize(clean, contentWidth - indent);
+      const actualLineHeight = lineHeight || (size >= 20 ? 9 : size >= 16 ? 8 : 6.8);
 
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 18;
-      const contentWidth = pageWidth - (margin * 2);
-      let y = 24;
-      let pageNumber = 1;
-      let lastHeadingKey = '';
+      doc.setFont(font, style);
+      doc.setFontSize(size);
+      doc.setTextColor(...color);
 
-      const normalizeKey = (text = '') =>
-        String(text)
-          .toLowerCase()
-          .replace(/\s+/g, ' ')
-          .replace(/[^a-z0-9: ]/g, '')
-          .trim();
-
-      const drawFooter = (pageNo) => {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(120);
-        doc.text('Created with PeeyashBooks', margin, pageHeight - 10);
-        doc.text(`Page ${pageNo}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
-      };
-
-      const ensureSpace = (needed = 10) => {
-        if (y + needed <= pageHeight - 18) return;
-        drawFooter(pageNumber);
-        doc.addPage();
-        pageNumber += 1;
-        y = 24;
-      };
-
-      const addWrappedText = (text, opts = {}) => {
-        const {
-          font = 'helvetica',
-          style = 'normal',
-          size = 12,
-          color = [35, 35, 35],
-          gapAfter = 6,
-          indent = 0
-        } = opts;
-
-        const clean = String(text || '').replace(/\s+/g, ' ').trim();
-        if (!clean) {
-          y += gapAfter;
-          return;
+      for (const line of lines) {
+        if (y + actualLineHeight > bottomLimit) {
+          newPage();
+          doc.setFont(font, style);
+          doc.setFontSize(size);
+          doc.setTextColor(...color);
         }
 
-        doc.setFont(font, style);
-        doc.setFontSize(size);
-        doc.setTextColor(...color);
+        doc.text(line, margin + indent, y);
+        y += actualLineHeight;
+      }
 
-        const lines = doc.splitTextToSize(clean, contentWidth - indent);
-        const lineHeight = size >= 22 ? 9 : size >= 18 ? 8 : size >= 15 ? 7.2 : 6.2;
-        ensureSpace((lines.length * lineHeight) + gapAfter);
-        doc.text(lines, margin + indent, y);
-        y += (lines.length * lineHeight) + gapAfter;
-      };
+      y += gapAfter;
+    };
 
-      const addDivider = () => {
-        ensureSpace(8);
-        doc.setDrawColor(124, 92, 255);
-        doc.setLineWidth(0.8);
-        doc.line(margin, y, pageWidth - margin, y);
-        y += 8;
-      };
+    const addDivider = () => {
+      if (y + 10 > bottomLimit) newPage();
+      doc.setDrawColor(124, 92, 255);
+      doc.setLineWidth(0.8);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 10;
+    };
 
-      const title = payload.title || 'Untitled ebook';
-      const author = payload.author || 'Anonymous Author';
+    const addParagraph = (text) => {
+      addWrappedText(text, {
+        size: 11,
+        color: [50, 50, 50],
+        gapAfter: 6,
+        lineHeight: 6.2
+      });
+    };
 
-      addWrappedText(title, {
+    const addChapterHeading = (text) => {
+      addWrappedText(text, {
         style: 'bold',
-        size: 24,
-        color: [15, 23, 42],
-        gapAfter: 5
+        size: 14,
+        color: [25, 35, 55],
+        gapAfter: 7,
+        lineHeight: 7.2
       });
+    };
 
-      addWrappedText(`by ${author}`, {
-        size: 12,
-        color: [90, 90, 90],
-        gapAfter: 8
+    const addSubHeading = (text) => {
+      addWrappedText(text, {
+        style: 'bold',
+        size: 13,
+        color: [30, 40, 60],
+        gapAfter: 6,
+        lineHeight: 7
       });
+    };
 
-      addDivider();
+    const title = payload.title || 'Untitled ebook';
+    const author = payload.author || 'Anonymous Author';
 
-      const parser = document.createElement('div');
-      parser.innerHTML = exportHtml;
+    addWrappedText(title, {
+      style: 'bold',
+      size: 22,
+      color: [15, 23, 42],
+      gapAfter: 5,
+      lineHeight: 9
+    });
 
-      const addHeading = (text, size, gapAfter = 5) => {
-        const key = normalizeKey(text);
-        if (!key || key === lastHeadingKey) return;
-        lastHeadingKey = key;
-        ensureSpace(size >= 16 ? 16 : 12);
+    addWrappedText(`by ${author}`, {
+      size: 11,
+      color: [110, 110, 110],
+      gapAfter: 10,
+      lineHeight: 6
+    });
+
+    addDivider();
+
+    const parser = document.createElement('div');
+    parser.innerHTML = exportHtml;
+
+    const normalizedText = (node) =>
+      utils.stripHtml(node?.innerHTML || '').replace(/\s+/g, ' ').trim();
+
+    const keepHeadingWithNextParagraph = (node, headingOpts, paragraphOpts) => {
+      const nextEl = node.nextElementSibling;
+      const headingText = normalizedText(node);
+      const headingHeight = estimateWrappedHeight(headingText, headingOpts);
+      let needed = headingHeight;
+
+      if (nextEl && nextEl.tagName && nextEl.tagName.toLowerCase() === 'p') {
+        const paraText = normalizedText(nextEl);
+        const paraHeight = estimateWrappedHeight(paraText, paragraphOpts);
+        needed += Math.min(paraHeight, paragraphOpts.lineHeight * 4);
+      }
+
+      if (y + needed > bottomLimit) {
+        newPage();
+      }
+    };
+
+    const walkNode = (node) => {
+      if (!node || node.nodeType !== Node.ELEMENT_NODE) return;
+
+      const tag = node.tagName.toLowerCase();
+      const text = normalizedText(node);
+
+      if (!text && !['div', 'section', 'article', 'ul', 'ol'].includes(tag)) return;
+
+      if (tag === 'h1') {
+        keepHeadingWithNextParagraph(node, { size: 18, gapAfter: 7, lineHeight: 8.4 }, { size: 11, gapAfter: 6, lineHeight: 6.2 });
         addWrappedText(text, {
           style: 'bold',
-          size,
-          color: [31, 41, 55],
-          gapAfter
+          size: 18,
+          color: [20, 30, 50],
+          gapAfter: 7,
+          lineHeight: 8.4
         });
-      };
+        return;
+      }
 
-      const walkNode = (node) => {
-        if (!node || node.nodeType !== Node.ELEMENT_NODE) return;
+      if (tag === 'h2') {
+        keepHeadingWithNextParagraph(node, { size: 14, gapAfter: 7, lineHeight: 7.2 }, { size: 11, gapAfter: 6, lineHeight: 6.2 });
+        addChapterHeading(text);
+        return;
+      }
 
-        const tag = node.tagName.toLowerCase();
-        const text = utils.stripHtml(node.innerHTML || '').replace(/\s+/g, ' ').trim();
+      if (tag === 'h3' || tag === 'h4') {
+        keepHeadingWithNextParagraph(node, { size: 13, gapAfter: 6, lineHeight: 7 }, { size: 11, gapAfter: 6, lineHeight: 6.2 });
+        addSubHeading(text);
+        return;
+      }
 
-        if (tag === 'h1') {
-          addHeading(text, 20, 6);
-          return;
-        }
+      if (tag === 'p') {
+        addParagraph(text);
+        return;
+      }
 
-        if (tag === 'h2') {
-          addHeading(text, 16, 5);
-          return;
-        }
-
-        if (tag === 'h3' || tag === 'h4') {
-          addHeading(text, 13, 4);
-          return;
-        }
-
-        if (tag === 'p') {
-          addWrappedText(text, {
-            size: 12,
-            color: [45, 45, 45],
-            gapAfter: 7
+      if (tag === 'ul' || tag === 'ol') {
+        const items = Array.from(node.children).filter((child) => child.tagName && child.tagName.toLowerCase() === 'li');
+        items.forEach((item, index) => {
+          const bullet = tag === 'ol' ? `${index + 1}.` : '•';
+          const itemText = normalizedText(item);
+          addWrappedText(`${bullet} ${itemText}`, {
+            size: 11,
+            color: [50, 50, 50],
+            gapAfter: 4,
+            indent: 2,
+            lineHeight: 6.2
           });
-          return;
-        }
+        });
+        y += 2;
+        return;
+      }
 
-        if (tag === 'ul' || tag === 'ol') {
-          const items = Array.from(node.children).filter((child) => child.tagName && child.tagName.toLowerCase() === 'li');
-          items.forEach((item, index) => {
-            const bullet = tag === 'ol' ? `${index + 1}.` : '•';
-            const itemText = utils.stripHtml(item.innerHTML || '').replace(/\s+/g, ' ').trim();
-            addWrappedText(`${bullet} ${itemText}`, {
-              size: 12,
-              color: [45, 45, 45],
-              gapAfter: 4,
-              indent: 2
-            });
-          });
-          y += 2;
-          return;
-        }
+      if (tag === 'blockquote') {
+        if (y + 14 > bottomLimit) newPage();
+        doc.setDrawColor(210, 210, 210);
+        doc.setLineWidth(0.7);
+        doc.line(margin, y, margin, y + 12);
+        addWrappedText(text, {
+          size: 11,
+          color: [90, 90, 90],
+          gapAfter: 8,
+          indent: 5,
+          lineHeight: 6.2
+        });
+        return;
+      }
 
-        if (tag === 'blockquote') {
-          const quoteText = utils.stripHtml(node.innerHTML || '').replace(/\s+/g, ' ').trim();
-          ensureSpace(12);
-          doc.setDrawColor(210, 210, 210);
-          doc.setLineWidth(0.6);
-          doc.line(margin, y, margin, y + 10);
-          addWrappedText(quoteText, {
-            size: 12,
-            color: [70, 70, 70],
-            gapAfter: 6,
-            indent: 4
-          });
-          return;
-        }
+      if (tag === 'div' || tag === 'section' || tag === 'article') {
+        Array.from(node.childNodes).forEach((child) => {
+          if (child.nodeType === Node.ELEMENT_NODE) {
+            walkNode(child);
+          }
+        });
+      }
+    };
 
-        if (tag === 'div' || tag === 'section' || tag === 'article') {
-          Array.from(node.childNodes).forEach((child) => {
-            if (child.nodeType === Node.ELEMENT_NODE) {
-              walkNode(child);
-            }
-          });
-          return;
-        }
+    Array.from(parser.childNodes).forEach((node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        walkNode(node);
+      }
+    });
 
-        if (text) {
-          addWrappedText(text, {
-            size: 12,
-            color: [45, 45, 45],
-            gapAfter: 6
-          });
-        }
-      };
+    drawFooter(pageNumber);
+    doc.save(`${utils.slugify(title) || 'peeyashbooks-export'}.pdf`);
 
-      Array.from(parser.childNodes).forEach((node) => {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          walkNode(node);
-        }
-      });
-
-      drawFooter(pageNumber);
-      doc.save(`${utils.slugify(title) || 'peeyashbooks-export'}.pdf`);
-
-      utils.toast('PDF export complete.');
-      utils.closeModal('exportModal');
-      setSaveState('Saved', 'success');
-    } catch (error) {
-      console.error('PDF export error:', error);
-      utils.toast('PDF export could not be completed. Please try again.');
-      setSaveState('Saved', 'default');
-    } finally {
-      utils.resetButtonState(confirmExportBtn);
-    }
-  });
-
+    utils.toast('PDF export complete.');
+    utils.closeModal('exportModal');
+    setSaveState('Saved', 'success');
+  } catch (error) {
+    console.error('PDF export error:', error);
+    utils.toast('PDF export could not be completed. Please try again.');
+    setSaveState('Saved', 'default');
+  } finally {
+    utils.resetButtonState(confirmExportBtn);
+  }
+});
 }
 
 function initReaderPage() {
@@ -1398,4 +1451,3 @@ initGlobalEffects();
 if (page === 'home') initHomePage();
 if (page === 'editor') initEditorPage();
 if (page === 'reader') initReaderPage();
-
