@@ -1226,31 +1226,33 @@ function initEditorPage() {
       };
 
       const addWrappedText = (text, opts = {}) => {
-        const {
-          font = 'helvetica',
-          style = 'normal',
-          size = 12,
-          color = [35, 35, 35],
-          gapAfter = 6,
-          indent = 0
-        } = opts;
+  const {
+    font = 'helvetica',
+    style = 'normal',
+    size = 12,
+    color = [35, 35, 35],
+    gapAfter = 6,
+    indent = 0
+  } = opts;
 
-        const clean = String(text || '').replace(/\s+/g, ' ').trim();
-        if (!clean) {
-          y += gapAfter;
-          return;
-        }
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!clean) {
+    y += gapAfter;
+    return;
+  }
 
-        doc.setFont(font, style);
-        doc.setFontSize(size);
-        doc.setTextColor(...color);
+  const lines = doc.splitTextToSize(clean, contentWidth - indent);
+  const lineHeight = size >= 22 ? 9 : size >= 18 ? 8 : size >= 15 ? 7.2 : 6.2;
+  ensureSpace((lines.length * lineHeight) + gapAfter);
 
-        const lines = doc.splitTextToSize(clean, contentWidth - indent);
-        const lineHeight = size >= 22 ? 9 : size >= 18 ? 8 : size >= 15 ? 7.2 : 6.2;
-        ensureSpace((lines.length * lineHeight) + gapAfter);
-        doc.text(lines, margin + indent, y);
-        y += (lines.length * lineHeight) + gapAfter;
-      };
+  // re-apply text styling AFTER page breaks / footer drawing
+  doc.setFont(font, style);
+  doc.setFontSize(size);
+  doc.setTextColor(...color);
+
+  doc.text(lines, margin + indent, y);
+  y += (lines.length * lineHeight) + gapAfter;
+};
 
       const addDivider = () => {
         ensureSpace(8);
