@@ -1197,6 +1197,7 @@ function initEditorPage() {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 14;
+    const bottomLimit = pageHeight - 20;
     const contentWidth = pageWidth - (margin * 2);
     let y = 26;
     let pageNumber = 1;
