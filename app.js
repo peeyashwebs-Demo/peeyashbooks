@@ -1222,46 +1222,44 @@ function initEditorPage() {
       }
     };
 
-    const addWrappedText = (text, opts = {}) => {
-      const {
-        font = 'helvetica',
-        style = 'normal',
-        size = 12,
-        color = [40, 40, 40],
-        gapAfter = 6,
-        indent = 0,
-        lineHeight = null
-      } = opts;
+   const addWrappedText = (text, opts = {}) => {
+  const {
+    font = 'helvetica',
+    style = 'normal',
+    size = 12,
+    color = [40, 40, 40],
+    gapAfter = 6,
+    indent = 0,
+    lineHeight = null
+  } = opts;
 
-      const clean = String(text || '').replace(/\s+/g, ' ').trim();
-      if (!clean) {
-        y += gapAfter;
-        return;
-      }
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!clean) {
+    y += gapAfter;
+    return;
+  }
 
-      const lines = doc.splitTextToSize(clean, contentWidth - indent);
-      const actualLineHeight = lineHeight || (size >= 20 ? 9 : size >= 16 ? 8 : 6.8);
+  const lines = doc.splitTextToSize(clean, contentWidth - indent);
+  const actualLineHeight = lineHeight || (size >= 20 ? 9 : size >= 16 ? 8 : 6.8);
 
-      doc.setFont(font, style);
-      doc.setFontSize(size);
-      doc.setTextColor(...color);
-
-      if (y + (lines.length * actualLineHeight) > bottomLimit) {
-  newPage();
   doc.setFont(font, style);
   doc.setFontSize(size);
   doc.setTextColor(...color);
-}
 
-doc.text(lines, margin + indent, y, {
-  maxWidth: contentWidth - indent,
-  align: 'justify',
-  lineHeightFactor: 1.4
-});
+  for (const line of lines) {
+    if (y + actualLineHeight > bottomLimit) {
+      newPage();
+      doc.setFont(font, style);
+      doc.setFontSize(size);
+      doc.setTextColor(...color);
+    }
 
-y += (lines.length * actualLineHeight) + gapAfter;
-    };
+    doc.text(line, margin + indent, y);
+    y += actualLineHeight;
+  }
 
+  y += gapAfter;
+};
     const addDivider = () => {
       ensureSpace(10);
       doc.setDrawColor(124, 92, 255);
