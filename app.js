@@ -317,11 +317,39 @@ function initEditorPage() {
   }
 
   function buildCombinedContent() {
-    return currentDraft.chapters.map((chapter, index) => {
-      const title = chapter.title?.trim() || `Chapter ${index + 1}`;
-      return `<h2>${title}</h2>${chapter.content || '<p></p>'}`;
-    }).join('');
-  }
+  return currentDraft.chapters.map((chapter, index) => {
+    const title = chapter.title?.trim() || `Chapter ${index + 1}`;
+    let rawContent = chapter.content || '<p></p>';
+
+    const parser = document.createElement('div');
+    parser.innerHTML = rawContent.trim();
+
+    const firstElement = parser.firstElementChild;
+
+    if (firstElement && /^h[1-4]$/i.test(firstElement.tagName)) {
+      const firstText = utils.stripHtml(firstElement.innerHTML)
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+
+      const normalizedTitle = title
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+
+      // 🔥 REMOVE duplicate headings OR "Chapter X: Title" patterns
+      if (
+        firstText === normalizedTitle ||
+        firstText.startsWith(normalizedTitle) ||
+        normalizedTitle.startsWith(firstText)
+      ) {
+        firstElement.remove();
+      }
+    }
+
+    return `<h2>${title}</h2>${parser.innerHTML || '<p></p>'}`;
+  }).join('');
+}
 
   function draftPayload() {
     syncActiveChapterFromEditor();
