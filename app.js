@@ -1242,14 +1242,23 @@ function initEditorPage() {
       const lines = doc.splitTextToSize(clean, contentWidth - indent);
       const actualLineHeight = lineHeight || (size >= 20 ? 9 : size >= 16 ? 8 : 6.8);
 
-      ensureSpace((lines.length * actualLineHeight) + gapAfter);
-
       doc.setFont(font, style);
       doc.setFontSize(size);
       doc.setTextColor(...color);
-      doc.text(lines, margin + indent, y);
 
-      y += (lines.length * actualLineHeight) + gapAfter;
+      for (const line of lines) {
+        if (y + actualLineHeight > pageHeight - 20) {
+          newPage();
+          doc.setFont(font, style);
+          doc.setFontSize(size);
+          doc.setTextColor(...color);
+        }
+
+        doc.text(line, margin + indent, y);
+        y += actualLineHeight;
+      }
+
+      y += gapAfter;
     };
 
     const addDivider = () => {
@@ -1270,13 +1279,13 @@ function initEditorPage() {
     };
 
     const addChapterHeading = (text) => {
-      ensureSpace(16);
+      y += 2;
       addWrappedText(text, {
         style: 'bold',
-        size: 15,
+        size: 14,
         color: [25, 35, 55],
         gapAfter: 7,
-        lineHeight: 7.8
+        lineHeight: 7.2
       });
     };
 
