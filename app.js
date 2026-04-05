@@ -1230,7 +1230,7 @@ function initEditorPage() {
         color = [40, 40, 40],
         gapAfter = 6,
         indent = 0,
-        lineHeight = null
+        lineHeight = 6.8
       } = opts;
 
       const clean = String(text || '').replace(/\s+/g, ' ').trim();
@@ -1254,7 +1254,10 @@ function initEditorPage() {
           doc.setTextColor(...color);
         }
 
-        doc.text(line, margin + indent, y);
+        doc.text(line, margin + indent, y, {
+  maxWidth: contentWidth - indent,
+  align: 'justify'
+});
         y += actualLineHeight;
       }
 
