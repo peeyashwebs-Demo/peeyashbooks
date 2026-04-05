@@ -1230,7 +1230,7 @@ function initEditorPage() {
         color = [40, 40, 40],
         gapAfter = 6,
         indent = 0,
-        lineHeight = 6.8
+        lineHeight = null
       } = opts;
 
       const clean = String(text || '').replace(/\s+/g, ' ').trim();
@@ -1246,22 +1246,20 @@ function initEditorPage() {
       doc.setFontSize(size);
       doc.setTextColor(...color);
 
-      for (const line of lines) {
-        if (y + actualLineHeight > pageHeight - 20) {
-          newPage();
-          doc.setFont(font, style);
-          doc.setFontSize(size);
-          doc.setTextColor(...color);
-        }
+      if (y + (lines.length * actualLineHeight) > bottomLimit) {
+  newPage();
+  doc.setFont(font, style);
+  doc.setFontSize(size);
+  doc.setTextColor(...color);
+}
 
-        doc.text(line, margin + indent, y, {
+doc.text(lines, margin + indent, y, {
   maxWidth: contentWidth - indent,
-  align: 'justify'
+  align: 'justify',
+  lineHeightFactor: 1.4
 });
-        y += actualLineHeight;
-      }
 
-      y += gapAfter;
+y += (lines.length * actualLineHeight) + gapAfter;
     };
 
     const addDivider = () => {
