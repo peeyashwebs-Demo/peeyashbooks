@@ -1,156 +1,1015 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PeeyashBooks — Write. Publish. Share.</title>
-  <meta name="description" content="PeeyashBooks is a premium eBook writing, publishing, and export platform for creators." />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PeeyashBooks — Write. Publish. Share.</title>
+<meta name="description" content="PeeyashBooks is a premium eBook writing, publishing, and export platform for creators." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600;700&family=Cinzel:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+/* ============================================================
+   DESIGN TOKENS — identical to editor
+   ============================================================ */
+:root {
+  --bg-base:        #07080f;
+  --bg-layer1:      #0d0f1c;
+  --bg-layer2:      #12152a;
+  --bg-glass:       rgba(255,255,255,0.04);
+  --bg-glass-hover: rgba(255,255,255,0.07);
+  --border:         rgba(255,255,255,0.07);
+  --border-active:  rgba(110,130,255,0.5);
+  --accent-blue:    #5b73ff;
+  --accent-purple:  #9b5fe0;
+  --accent-cyan:    #3ecfcf;
+  --accent-glow:    rgba(91,115,255,0.35);
+  --grad-primary:   linear-gradient(135deg,#5b73ff,#9b5fe0);
+  --text-primary:   #eef0ff;
+  --text-secondary: #8890b8;
+  --text-muted:     #535a7a;
+  --radius-sm:      6px;
+  --radius-md:      12px;
+  --radius-lg:      18px;
+  --radius-xl:      24px;
+  --shadow-glow:    0 0 40px rgba(91,115,255,0.18);
+  --shadow-card:    0 8px 32px rgba(0,0,0,0.45);
+  --transition:     all 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(91,115,255,0.35); border-radius: 99px; }
+
+/* ── Animated background mesh ── */
+.bg-mesh {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  overflow: hidden;
+}
+.bg-mesh::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% -5%,  rgba(91,115,255,0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 90% 110%, rgba(155,95,224,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 50% 50%,  rgba(62,207,207,0.05) 0%, transparent 65%);
+  animation: mesh-drift 20s ease-in-out infinite alternate;
+}
+.bg-mesh::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 40% 30% at 75% 20%, rgba(155,95,224,0.09) 0%, transparent 60%);
+  animation: mesh-drift 28s ease-in-out infinite alternate-reverse;
+}
+@keyframes mesh-drift {
+  0%   { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(20px, 30px) scale(1.05); }
+}
+
+/* Grid noise overlay */
+.noise {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px;
+}
+
+/* Shell (max-width container) */
+.shell {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 28px;
+  position: relative; z-index: 1;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.site-header {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 64px;
+  background: rgba(7,8,15,0.75);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  z-index: 1000;
+  box-shadow: 0 2px 40px rgba(0,0,0,0.4);
+  max-width: 100%;
+  padding: 0 28px;
+  transition: background 0.3s;
+}
+.site-header.scrolled {
+  background: rgba(7,8,15,0.95);
+}
+
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Cinzel', serif; font-size: 16px; font-weight: 600;
+  color: var(--text-primary); text-decoration: none; letter-spacing: 0.5px;
+}
+.brand-mark {
+  width: 32px; height: 32px; border-radius: 9px;
+  background: var(--grad-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 0 18px var(--accent-glow);
+  flex-shrink: 0;
+}
+.brand-mark::after { content: '📖'; }
+
+.top-nav {
+  display: flex; align-items: center; gap: 6px;
+}
+.top-nav a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 13.5px; font-weight: 500; padding: 6px 14px;
+  border-radius: var(--radius-sm); transition: var(--transition);
+}
+.top-nav a:hover { color: var(--text-primary); background: var(--bg-glass); }
+
+/* ── Shared button styles ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 20px; border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif; font-size: 13.5px; font-weight: 500;
+  cursor: pointer; border: none; outline: none; text-decoration: none;
+  transition: var(--transition); white-space: nowrap;
+}
+.btn-ghost {
+  background: var(--bg-glass); color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover {
+  background: var(--bg-glass-hover); color: var(--text-primary);
+  border-color: rgba(255,255,255,0.15); transform: translateY(-1px);
+}
+.btn-primary {
+  background: var(--grad-primary); color: #fff;
+  box-shadow: 0 4px 18px rgba(91,115,255,0.35);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(91,115,255,0.5);
+}
+.btn-primary:active { transform: translateY(0); }
+.btn-secondary {
+  background: var(--bg-glass); color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover {
+  background: var(--bg-glass-hover); color: var(--text-primary);
+  transform: translateY(-1px);
+}
+.btn-lg { padding: 13px 30px; font-size: 15px; border-radius: var(--radius-md); }
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero {
+  display: grid; grid-template-columns: 1fr 1fr;
+  align-items: center; gap: 60px;
+  min-height: 100vh;
+  padding-top: 100px; padding-bottom: 80px;
+}
+
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 600; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--accent-blue);
+  margin-bottom: 18px;
+}
+.eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 18px; height: 1.5px;
+  background: var(--accent-blue);
+  border-radius: 99px;
+}
+
+.hero-copy h1 {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(2.2rem, 4vw, 3.6rem);
+  font-weight: 600; line-height: 1.15;
+  margin-bottom: 20px;
+  letter-spacing: 0.5px;
+}
+.hero-copy h1 .grad-text {
+  background: var(--grad-primary);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-copy h1 .muted { color: var(--text-secondary); -webkit-text-fill-color: var(--text-secondary); }
+
+/* Typing effect */
+.hero-typing {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.25rem; font-style: italic;
+  color: var(--text-secondary); margin-bottom: 12px;
+  min-height: 2em;
+}
+.cursor {
+  display: inline-block;
+  color: var(--accent-blue);
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+
+.hero-subtext {
+  font-size: 12px; color: var(--text-muted);
+  margin-bottom: 32px; letter-spacing: 0.3px;
+}
+
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 36px; }
+
+.hero-micro {
+  font-size: 13px; color: var(--text-muted);
+  line-height: 1.7; max-width: 440px;
+  padding-left: 16px; border-left: 2px solid rgba(91,115,255,0.3);
+}
+
+/* ── Hero stats bar ── */
+.hero-stats {
+  display: flex; gap: 28px; margin-top: 40px;
+  padding-top: 28px; border-top: 1px solid var(--border);
+}
+.hero-stat {}
+.hero-stat-val {
+  font-family: 'Cinzel', serif; font-size: 1.6rem; font-weight: 600;
+  background: var(--grad-primary);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; line-height: 1;
+  margin-bottom: 4px;
+}
+.hero-stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+/* ── Hero visual (right side) ── */
+.hero-visual { position: relative; display: flex; align-items: center; justify-content: center; }
+
+.orbital-ring {
+  position: absolute;
+  width: 420px; height: 420px;
+  border: 1px solid rgba(91,115,255,0.12);
+  border-radius: 50%;
+  animation: orbit-spin 30s linear infinite;
+}
+.orbital-ring::before {
+  content: '';
+  position: absolute; top: -5px; left: 50%;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent-blue);
+  box-shadow: 0 0 12px var(--accent-blue);
+  transform: translateX(-50%);
+}
+.orbital-ring-2 {
+  position: absolute;
+  width: 300px; height: 300px;
+  border: 1px solid rgba(155,95,224,0.1);
+  border-radius: 50%;
+  animation: orbit-spin 20s linear infinite reverse;
+}
+@keyframes orbit-spin { to { transform: rotate(360deg); } }
+
+/* Dashboard preview card */
+.dashboard-card {
+  position: relative; z-index: 2;
+  width: 340px;
+  background: rgba(18,21,42,0.85);
+  border: 1px solid rgba(91,115,255,0.2);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-card), 0 0 60px rgba(91,115,255,0.12);
+}
+
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px;
+}
+.badge-live {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 600; letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+  background: rgba(62,207,207,0.1);
+  border: 1px solid rgba(62,207,207,0.25);
+  padding: 3px 10px; border-radius: 99px;
+}
+.badge-live::before {
+  content: '';
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent-cyan);
+  box-shadow: 0 0 6px var(--accent-cyan);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+.mini-dots { display: flex; gap: 4px; }
+.mini-dots i {
+  display: block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--border);
+}
+.mini-dots i:nth-child(1) { background: rgba(255,80,80,0.5); }
+.mini-dots i:nth-child(2) { background: rgba(255,180,0,0.5); }
+.mini-dots i:nth-child(3) { background: rgba(0,200,80,0.4); }
+
+.card-title {
+  font-family: 'Cinzel', serif; font-size: 13px; color: var(--text-secondary);
+  margin-bottom: 16px; line-height: 1.5;
+}
+
+/* Animated preview lines */
+.preview-lines { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.preview-line {
+  height: 8px; border-radius: 99px;
+  background: rgba(255,255,255,0.06);
+  animation: shimmer 2.5s ease-in-out infinite;
+  position: relative; overflow: hidden;
+}
+.preview-line::after {
+  content: '';
+  position: absolute; top: 0; left: -100%; width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(91,115,255,0.25), transparent);
+  animation: sweep 2.5s ease-in-out infinite;
+}
+.preview-line:nth-child(2) { width: 75%; animation-delay: 0.2s; }
+.preview-line:nth-child(2)::after { animation-delay: 0.2s; }
+.preview-line:nth-child(3) { width: 88%; animation-delay: 0.4s; }
+.preview-line:nth-child(3)::after { animation-delay: 0.4s; }
+.preview-line:nth-child(4) { width: 60%; animation-delay: 0.6s; }
+.preview-line:nth-child(4)::after { animation-delay: 0.6s; }
+.preview-block {
+  height: 48px; border-radius: var(--radius-sm);
+  background: rgba(91,115,255,0.07);
+  border: 1px solid rgba(91,115,255,0.12);
+  margin-top: 4px;
+}
+@keyframes shimmer { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+@keyframes sweep { 0% { left: -80%; } 100% { left: 120%; } }
+
+.card-pills {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px;
+}
+.card-pills span {
+  font-size: 10.5px; font-weight: 500; color: var(--accent-blue);
+  background: rgba(91,115,255,0.1);
+  border: 1px solid rgba(91,115,255,0.2);
+  padding: 3px 10px; border-radius: 99px;
+}
+
+/* Float animation */
+.floating-card {
+  animation: float 5s ease-in-out infinite;
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+
+/* Tilt effect */
+.tilt-card { transition: transform 0.2s ease; }
+
+/* ============================================================
+   SECTION SHARED STYLES
+   ============================================================ */
+.section { padding: 100px 0; }
+.section-heading { text-align: center; max-width: 620px; margin: 0 auto 64px; }
+.section-heading h2 {
+  font-family: 'Cinzel', serif; font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 600; margin-bottom: 14px; line-height: 1.2;
+}
+.section-heading p { color: var(--text-secondary); font-size: 15px; line-height: 1.7; }
+
+/* Glass card wrapper */
+.glass-card {
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(12px);
+  padding: 36px;
+  transition: var(--transition);
+}
+.glass-card:hover {
+  background: var(--bg-glass-hover);
+  border-color: rgba(255,255,255,0.1);
+  box-shadow: var(--shadow-glow);
+}
+
+/* ============================================================
+   PROGRESS SECTION
+   ============================================================ */
+.progress-panel {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center;
+}
+.progress-panel h2 { font-family: 'Cinzel', serif; font-size: 1.8rem; margin-bottom: 12px; }
+.progress-panel p { color: var(--text-secondary); font-size: 14px; line-height: 1.75; }
+
+.progress-wrap {}
+.progress-meta {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px; font-size: 13px; color: var(--text-muted);
+}
+.progress-meta strong {
+  font-size: 1.4rem; font-weight: 700;
+  background: var(--grad-primary);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.progress-bar {
+  height: 6px; background: rgba(255,255,255,0.07); border-radius: 99px; overflow: hidden;
+  margin-bottom: 14px;
+}
+.progress-bar span {
+  display: block; height: 100%; width: 0;
+  background: var(--grad-primary); border-radius: 99px;
+  transition: width 1.8s cubic-bezier(0.4,0,0.2,1);
+}
+.progress-notes {
+  display: flex; gap: 16px; flex-wrap: wrap;
+}
+.progress-notes span {
+  font-size: 11px; color: var(--text-muted);
+  display: flex; align-items: center; gap: 5px;
+}
+.progress-notes span::before {
+  content: '✓'; color: var(--accent-cyan); font-size: 10px;
+}
+
+/* ============================================================
+   FEATURES GRID
+   ============================================================ */
+.feature-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+}
+.feature-card {
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 32px 28px;
+  transition: var(--transition);
+  position: relative; overflow: hidden;
+}
+.feature-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--grad-primary); opacity: 0;
+  transition: opacity 0.3s;
+}
+.feature-card:hover {
+  background: var(--bg-glass-hover);
+  border-color: rgba(91,115,255,0.2);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card), 0 0 40px rgba(91,115,255,0.1);
+}
+.feature-card:hover::before { opacity: 1; }
+
+.feature-icon {
+  font-size: 28px; margin-bottom: 18px;
+  display: flex; align-items: center; justify-content: center;
+  width: 56px; height: 56px; border-radius: var(--radius-md);
+  background: rgba(91,115,255,0.1); border: 1px solid rgba(91,115,255,0.15);
+}
+.feature-card h3 {
+  font-family: 'Cinzel', serif; font-size: 1.05rem; font-weight: 500;
+  margin-bottom: 10px; color: var(--text-primary);
+}
+.feature-card p { font-size: 13.5px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 18px; }
+.feature-tag {
+  display: inline-block; font-size: 10.5px; font-weight: 600; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--accent-blue);
+  background: rgba(91,115,255,0.1); border: 1px solid rgba(91,115,255,0.2);
+  padding: 3px 10px; border-radius: 99px;
+}
+
+/* ============================================================
+   MONETIZATION SECTION
+   ============================================================ */
+.monetize-panel {
+  display: grid; grid-template-columns: 1fr auto; gap: 48px;
+  align-items: center;
+}
+.monetize-panel h2 { font-family: 'Cinzel', serif; font-size: 1.6rem; margin-bottom: 10px; }
+.monetize-panel p { color: var(--text-secondary); font-size: 14px; line-height: 1.7; }
+
+.chip-row { display: flex; flex-direction: column; gap: 10px; min-width: 220px; }
+.price-chip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 18px; border-radius: var(--radius-md);
+  font-size: 13px; font-weight: 500;
+  background: rgba(91,115,255,0.1);
+  border: 1px solid rgba(91,115,255,0.25);
+  color: var(--accent-blue);
+  transition: var(--transition);
+}
+.price-chip::before {
+  content: '₦'; font-weight: 700; color: var(--accent-purple);
+  font-size: 14px;
+}
+.price-chip:hover { background: rgba(91,115,255,0.18); transform: translateX(4px); }
+.price-chip.free-chip {
+  background: rgba(62,207,207,0.08);
+  border-color: rgba(62,207,207,0.2);
+  color: var(--accent-cyan);
+}
+.price-chip.free-chip::before { content: '🔗'; font-size: 13px; }
+
+/* ============================================================
+   HOW IT WORKS
+   ============================================================ */
+.steps-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+  position: relative;
+}
+.steps-grid::before {
+  content: '';
+  position: absolute; top: 36px; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(91,115,255,0.3), rgba(155,95,224,0.3), transparent);
+}
+.step-card {
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px 22px; text-align: center;
+  transition: var(--transition); position: relative;
+}
+.step-card:hover {
+  background: var(--bg-glass-hover); border-color: rgba(91,115,255,0.2);
+  transform: translateY(-4px);
+}
+.step-num {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--grad-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Cinzel', serif; font-size: 14px; font-weight: 600; color: #fff;
+  margin: 0 auto 16px;
+  box-shadow: 0 0 20px rgba(91,115,255,0.4);
+}
+.step-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
+.step-card p { font-size: 12.5px; color: var(--text-muted); line-height: 1.6; }
+
+/* ============================================================
+   CTA BAND
+   ============================================================ */
+.cta-band {
+  display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: center;
+  background: linear-gradient(135deg, rgba(91,115,255,0.1), rgba(155,95,224,0.1));
+  border: 1px solid rgba(91,115,255,0.2);
+}
+.cta-band h2 { font-family: 'Cinzel', serif; font-size: 1.7rem; margin-bottom: 8px; }
+.cta-band p  { color: var(--text-secondary); font-size: 14px; }
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 32px 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12.5px; color: var(--text-muted);
+  max-width: 100%;
+}
+.site-footer a { color: var(--text-muted); text-decoration: none; transition: var(--transition); }
+.site-footer a:hover { color: var(--text-primary); }
+.footer-links { display: flex; gap: 20px; align-items: center; }
+
+/* ============================================================
+   REVEAL ANIMATIONS
+   ============================================================ */
+.reveal-up {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.4,0,0.2,1), transform 0.7s cubic-bezier(0.4,0,0.2,1);
+}
+.reveal-up.visible { opacity: 1; transform: translateY(0); }
+
+.reveal-up:nth-child(2) { transition-delay: 0.1s; }
+.reveal-up:nth-child(3) { transition-delay: 0.2s; }
+.reveal-up:nth-child(4) { transition-delay: 0.3s; }
+
+/* Staggered children */
+[data-stagger] > * {
+  opacity: 0; transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+[data-stagger].visible > *:nth-child(1) { transition-delay: 0s;    opacity: 1; transform: none; }
+[data-stagger].visible > *:nth-child(2) { transition-delay: 0.12s; opacity: 1; transform: none; }
+[data-stagger].visible > *:nth-child(3) { transition-delay: 0.24s; opacity: 1; transform: none; }
+[data-stagger].visible > *:nth-child(4) { transition-delay: 0.36s; opacity: 1; transform: none; }
+
+/* ============================================================
+   MAGNETIC BUTTON
+   ============================================================ */
+.magnetic { position: relative; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 960px) {
+  .hero { grid-template-columns: 1fr; text-align: center; padding-top: 110px; }
+  .hero-visual { display: none; }
+  .hero-micro { margin: 0 auto; }
+  .hero-stats { justify-content: center; }
+  .hero-actions { justify-content: center; }
+  .progress-panel { grid-template-columns: 1fr; }
+  .feature-grid { grid-template-columns: 1fr 1fr; }
+  .steps-grid { grid-template-columns: 1fr 1fr; }
+  .monetize-panel { grid-template-columns: 1fr; }
+  .cta-band { grid-template-columns: 1fr; text-align: center; }
+  .cta-band .btn { margin: 0 auto; }
+}
+@media (max-width: 640px) {
+  .shell { padding: 0 18px; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .steps-grid { grid-template-columns: 1fr; }
+  .steps-grid::before { display: none; }
+  .hero-stats { flex-wrap: wrap; }
+  .site-footer { flex-direction: column; gap: 12px; text-align: center; }
+}
+</style>
 </head>
-<body data-page="home">
-  <div class="ambient ambient-1"></div>
-  <div class="ambient ambient-2"></div>
-  <div class="noise"></div>
 
-  <header class="site-header shell">
-    <a class="brand" href="index.html" aria-label="PeeyashBooks home">
-      <span class="brand-mark"></span>
-      <span>PeeyashBooks</span>
-    </a>
-    <nav class="top-nav" aria-label="Primary navigation">
-      <a href="#features">Features</a>
-      <a href="#pricing">Pricing</a>
-      <a href="editor.html" class="btn btn-ghost">Open Editor</a>
-    </nav>
-  </header>
+<body>
 
-  <main>
-    <section class="hero shell">
-      <div class="hero-copy reveal-up">
-        <div class="eyebrow">Interactive eBook Studio</div>
-        <h1>Write. Publish. Share.<br><span class="muted">You’re early — something powerful is coming.</span></h1>
-        <p class="hero-typing"><span id="typingText" aria-live="polite"></span><span class="cursor">|</span></p>
-        <p class="hero-subtext">🚀 Early Access — official domain coming soon</p>
-        <div class="hero-actions">
-          <a href="editor.html" class="btn btn-primary magnetic">Start Writing Free</a>
-          <a href="#progress" class="btn btn-secondary">See what’s live</a>
-        </div>
-        <div class="hero-micro">
-          Built for creators who want a cleaner writing flow, instant publishing, and ownership through export.
-        </div>
-      </div>
+<div class="bg-mesh"></div>
+<div class="noise"></div>
 
-      <div class="hero-visual reveal-up">
-        <div class="orbital-ring"></div>
-        <div class="dashboard-card floating-card tilt-card">
-          <div class="dashboard-top">
-            <span class="badge badge-live">Live MVP</span>
-            <span class="mini-dots"><i></i><i></i><i></i></span>
-          </div>
-          <div class="dashboard-title">Your next chapter starts here.</div>
-          <div class="dashboard-preview">
-            <div class="preview-line wide"></div>
-            <div class="preview-line"></div>
-            <div class="preview-line medium"></div>
-            <div class="preview-block"></div>
-          </div>
-          <div class="dashboard-pills">
-            <span>Rich writing</span>
-            <span>One-click publish</span>
-            <span>PDF export</span>
-          </div>
-        </div>
-      </div>
-    </section>
+<!-- ============================================================
+     HEADER
+     ============================================================ -->
+<header class="site-header" id="site-header">
+  <a class="brand" href="index.html" aria-label="PeeyashBooks home">
+    <span class="brand-mark"></span>
+    <span>PeeyashBooks</span>
+  </a>
+  <nav class="top-nav" aria-label="Primary navigation">
+    <a href="#features">Features</a>
+    <a href="#how-it-works">How It Works</a>
+    <a href="#pricing">Pricing</a>
+    <a href="editor.html" class="btn btn-ghost">Open Editor</a>
+  </nav>
+</header>
 
-    <section id="progress" class="shell section reveal-up">
-      <div class="section-card progress-panel tilt-card">
-        <div class="section-copy">
-          <div class="eyebrow">Platform Evolution</div>
-          <h2>Core features live. More coming soon.</h2>
-          <p>PeeyashBooks is already focused on the essentials: drafting, saving, sharing, and exporting. Each release sharpens the creator workflow.</p>
-        </div>
-        <div class="progress-wrap" aria-label="Platform evolution 70 percent">
-          <div class="progress-meta">
-            <span>Current build</span>
-            <strong>70%</strong>
-          </div>
-          <div class="progress-bar"><span style="width:70%"></span></div>
-          <div class="progress-notes">
-            <span>Writing engine</span>
-            <span>Publishing flow</span>
-            <span>Monetization hooks</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="features" class="shell section">
-      <div class="section-heading reveal-up">
-        <div class="eyebrow">Why creators pick it early</div>
-        <h2>A premium workflow without the clutter.</h2>
-        <p>Every surface is tuned to help you move from idea to published ebook with confidence.</p>
-      </div>
-      <div class="feature-grid">
-        <article class="feature-card floating-card tilt-card reveal-up">
-          <div class="feature-icon">✍️</div>
-          <h3>Write Easily</h3>
-          <p>Stay focused inside a distraction-free editor with rich formatting, auto-save, and comfortable reading width.</p>
-          <div class="feature-tag">Distraction-free editor</div>
-        </article>
-        <article class="feature-card floating-card tilt-card reveal-up">
-          <div class="feature-icon">🔗</div>
-          <h3>Share Instantly</h3>
-          <p>Turn your manuscript into a public reading link in seconds and start sharing your work while momentum is high.</p>
-          <div class="feature-tag">Public ebook links</div>
-        </article>
-        <article class="feature-card floating-card tilt-card reveal-up">
-          <div class="feature-icon">📘</div>
-          <h3>Export &amp; Own It</h3>
-          <p>Download polished PDFs with branded watermarking so your writing always leaves the platform with structure.</p>
-          <div class="feature-tag">Downloadable PDF</div>
-        </article>
-      </div>
-    </section>
-
-    <section id="pricing" class="shell section reveal-up">
-      <div class="section-card monetize-panel">
-        <div>
-          <div class="eyebrow">Monetization</div>
-          <h2>Write for free. Pay only when you’re ready.</h2>
-          <p>Start creating with zero friction, then unlock premium delivery when it matters most.</p>
-        </div>
-        <div class="chip-row">
-          <span class="price-chip">Export PDF — ₦200</span>
-          <span class="price-chip">Custom Link — ₦100</span>
-          <span class="price-chip muted-chip">Free publish with random slug</span>
-        </div>
-      </div>
-    </section>
-
-    <section class="shell section reveal-up">
-      <div class="cta-band section-card tilt-card">
-        <div>
-          <div class="eyebrow">Start now</div>
-          <h2>Build your first ebook in minutes.</h2>
-          <p>Your draft, your link, your export — all from one clean workspace.</p>
-        </div>
-        <a href="editor.html" class="btn btn-primary magnetic">Launch Editor</a>
-      </div>
-    </section>
-  </main>
-
-  <footer class="site-footer shell">
-    <span>PeeyashBooks — Built for creators</span>
-    <div>
-      <a href="editor.html">Editor</a>
-      <a href="#pricing">Pricing</a>
+<!-- ============================================================
+     HERO
+     ============================================================ -->
+<section class="hero shell" aria-labelledby="hero-heading">
+  <div class="hero-copy reveal-up">
+    <div class="eyebrow">Interactive eBook Studio</div>
+    <h1 id="hero-heading">
+      Write. Publish.<br>
+      <span class="grad-text">Share Your Story.</span>
+    </h1>
+    <p class="hero-typing">
+      <span id="typing-text" aria-live="polite"></span><span class="cursor">|</span>
+    </p>
+    <p class="hero-subtext">🚀 Early Access — craft your ebook in minutes, publish in seconds</p>
+    <div class="hero-actions">
+      <a href="editor.html" class="btn btn-primary btn-lg magnetic">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        Start Writing Free
+      </a>
+      <a href="#features" class="btn btn-secondary btn-lg">See Features</a>
     </div>
-  </footer>
+    <p class="hero-micro">
+      Built for creators who want a cleaner writing flow, instant publishing, and true ownership through export.
+    </p>
+    <div class="hero-stats" data-stagger>
+      <div class="hero-stat">
+        <div class="hero-stat-val">∞</div>
+        <div class="hero-stat-label">Chapters</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">₦200</div>
+        <div class="hero-stat-label">PDF Export</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">₦100</div>
+        <div class="hero-stat-label">Custom Link</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">AI</div>
+        <div class="hero-stat-label">Writing Help</div>
+      </div>
+    </div>
+  </div>
 
-  <script src="app.js"></script>
+  <div class="hero-visual" aria-hidden="true">
+    <div class="orbital-ring"></div>
+    <div class="orbital-ring-2"></div>
+    <div class="dashboard-card floating-card tilt-card">
+      <div class="card-header">
+        <span class="badge-live">Live MVP</span>
+        <span class="mini-dots"><i></i><i></i><i></i></span>
+      </div>
+      <div class="card-title">Your next chapter starts here.</div>
+      <div class="preview-lines">
+        <div class="preview-line"></div>
+        <div class="preview-line"></div>
+        <div class="preview-line"></div>
+        <div class="preview-line"></div>
+        <div class="preview-block"></div>
+      </div>
+      <div class="card-pills">
+        <span>Rich editing</span>
+        <span>One-click publish</span>
+        <span>PDF export</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     PROGRESS
+     ============================================================ -->
+<section id="progress" class="section shell reveal-up">
+  <div class="glass-card progress-panel">
+    <div>
+      <div class="eyebrow">Platform Evolution</div>
+      <h2>Core features live.<br>More coming fast.</h2>
+      <p>PeeyashBooks already ships the essentials: distraction-free drafting, auto-save, chapter management, AI writing assistant, custom publishing links, and PDF export with payment. Each release tightens the creator workflow.</p>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-meta">
+        <span>Current build progress</span>
+        <strong id="prog-display">0%</strong>
+      </div>
+      <div class="progress-bar"><span id="prog-bar" style="width:0%"></span></div>
+      <div class="progress-notes">
+        <span>Writing engine</span>
+        <span>Chapter manager</span>
+        <span>Publishing flow</span>
+        <span>Monetization</span>
+        <span>AI assistant</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     FEATURES
+     ============================================================ -->
+<section id="features" class="section shell">
+  <div class="section-heading reveal-up">
+    <div class="eyebrow">Why creators pick it early</div>
+    <h2>A premium workflow without the clutter.</h2>
+    <p>Every surface is tuned to help you move from idea to published ebook with confidence and clarity.</p>
+  </div>
+  <div class="feature-grid" data-stagger>
+    <article class="feature-card tilt-card">
+      <div class="feature-icon">✍️</div>
+      <h3>Write Easily</h3>
+      <p>Stay focused inside a distraction-free editor with rich formatting, sticky toolbar, font controls, auto-save, and comfortable reading width.</p>
+      <span class="feature-tag">Rich text editor</span>
+    </article>
+    <article class="feature-card tilt-card">
+      <div class="feature-icon">🤖</div>
+      <h3>AI Writing Help</h3>
+      <p>Stuck? Use the built-in AI assistant to continue writing, improve prose, rewrite professionally, or generate chapter ideas in seconds.</p>
+      <span class="feature-tag">AI assistant</span>
+    </article>
+    <article class="feature-card tilt-card">
+      <div class="feature-icon">🎨</div>
+      <h3>Design Your Cover</h3>
+      <p>Upload a custom cover image or use the auto-generated dark premium cover. Build your table of contents and keep everything organised.</p>
+      <span class="feature-tag">Cover &amp; TOC</span>
+    </article>
+    <article class="feature-card tilt-card">
+      <div class="feature-icon">🔗</div>
+      <h3>Share Instantly</h3>
+      <p>Turn your manuscript into a beautiful public reading page in seconds. Share your work while momentum is high — no backend needed.</p>
+      <span class="feature-tag">Custom reader links</span>
+    </article>
+    <article class="feature-card tilt-card">
+      <div class="feature-icon">📘</div>
+      <h3>Export &amp; Own It</h3>
+      <p>Download polished A4 PDFs with professional typography, cover page, table of contents, and branded watermark — all generated natively.</p>
+      <span class="feature-tag">PDF export</span>
+    </article>
+    <article class="feature-card tilt-card">
+      <div class="feature-icon">💾</div>
+      <h3>Never Lose Work</h3>
+      <p>Auto-save kicks in as you type, debounced and instant. Your chapters, cover, TOC, and settings are always preserved in your browser.</p>
+      <span class="feature-tag">Auto-save</span>
+    </article>
+  </div>
+</section>
+
+<!-- ============================================================
+     HOW IT WORKS
+     ============================================================ -->
+<section id="how-it-works" class="section shell">
+  <div class="section-heading reveal-up">
+    <div class="eyebrow">Simple by design</div>
+    <h2>From idea to published ebook in 4 steps.</h2>
+  </div>
+  <div class="steps-grid" data-stagger>
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <h3>Write</h3>
+      <p>Open the editor, add chapters, and start writing with full rich-text formatting tools.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <h3>Design</h3>
+      <p>Upload your cover image, edit the table of contents, and customise your ebook identity.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <h3>Publish</h3>
+      <p>Pay ₦100 to get a custom reader link. Share it anywhere — your readers see a premium reading page.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">4</div>
+      <h3>Export</h3>
+      <p>Pay ₦200 to download a print-ready PDF with your cover, chapters, and watermark baked in.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     PRICING
+     ============================================================ -->
+<section id="pricing" class="section shell reveal-up">
+  <div class="glass-card monetize-panel">
+    <div>
+      <div class="eyebrow">Transparent Pricing</div>
+      <h2>Write for free.<br>Pay only when you're ready.</h2>
+      <p>Start creating with zero friction. Pay a small flat fee only when you're ready to export or publish with a custom link. No subscriptions, no hidden costs.</p>
+      <br>
+      <a href="editor.html" class="btn btn-primary magnetic">Start Writing — It's Free</a>
+    </div>
+    <div class="chip-row">
+      <div class="price-chip">Export PDF — ₦200</div>
+      <div class="price-chip">Custom Link — ₦100</div>
+      <div class="price-chip free-chip">Free publish (random slug)</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     CTA
+     ============================================================ -->
+<section class="section shell reveal-up">
+  <div class="glass-card cta-band tilt-card">
+    <div>
+      <div class="eyebrow">Start now</div>
+      <h2>Build your first ebook in minutes.</h2>
+      <p>Your draft, your link, your export — all from one clean workspace. No sign-up required.</p>
+    </div>
+    <a href="editor.html" class="btn btn-primary btn-lg magnetic">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      Launch Editor
+    </a>
+  </div>
+</section>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<footer class="site-footer">
+  <span>© 2025 PeeyashBooks — Built for creators</span>
+  <div class="footer-links">
+    <a href="editor.html">Editor</a>
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+  </div>
+</footer>
+
+<script>
+/* ============================================================
+   LANDING PAGE INTERACTIONS
+   ============================================================ */
+
+/* ── Typing effect ── */
+(function() {
+  const phrases = [
+    'Write your first chapter tonight.',
+    'Publish your story to the world.',
+    'Export a polished PDF in seconds.',
+    'Your ebook deserves a premium home.',
+    'The blank page ends here.',
+  ];
+  const el   = document.getElementById('typing-text');
+  let pi = 0, ci = 0, deleting = false, wait = 0;
+
+  function tick() {
+    const phrase = phrases[pi];
+    if (!deleting) {
+      el.textContent = phrase.slice(0, ++ci);
+      if (ci === phrase.length) { deleting = true; wait = 2200; }
+    } else {
+      el.textContent = phrase.slice(0, --ci);
+      if (ci === 0) { deleting = false; pi = (pi + 1) % phrases.length; wait = 300; }
+    }
+    const speed = deleting ? 28 : (wait > 0 ? (wait = 0, 2200) : 55);
+    setTimeout(tick, speed);
+  }
+  setTimeout(tick, 800);
+})();
+
+/* ── Header scroll state ── */
+(function() {
+  const header = document.getElementById('site-header');
+  window.addEventListener('scroll', () => {
+    header.classList.toggle('scrolled', window.scrollY > 30);
+  }, { passive: true });
+})();
+
+/* ── Intersection Observer — reveal + progress bar ── */
+(function() {
+  const bar     = document.getElementById('prog-bar');
+  const display = document.getElementById('prog-display');
+  const TARGET  = 70;
+  let animated  = false;
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+
+      /* Reveal-up */
+      if (entry.target.classList.contains('reveal-up')) {
+        entry.target.classList.add('visible');
+      }
+
+      /* Data-stagger groups */
+      if (entry.target.hasAttribute('data-stagger')) {
+        entry.target.classList.add('visible');
+      }
+
+      /* Progress bar animation */
+      if (entry.target.id === 'prog-bar' && !animated) {
+        animated = true;
+        setTimeout(() => {
+          bar.style.width = TARGET + '%';
+          let n = 0;
+          const step = setInterval(() => {
+            n = Math.min(n + 1, TARGET);
+            display.textContent = n + '%';
+            if (n >= TARGET) clearInterval(step);
+          }, 18);
+        }, 300);
+      }
+
+      observer.unobserve(entry.target);
+    });
+  }, { threshold: 0.18 });
+
+  document.querySelectorAll('.reveal-up, [data-stagger], #prog-bar').forEach(el => observer.observe(el));
+})();
+
+/* ── Tilt effect ── */
+(function() {
+  document.querySelectorAll('.tilt-card').forEach(card => {
+    card.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width  - 0.5;
+      const y = (e.clientY - r.top)  / r.height - 0.5;
+      card.style.transform = `perspective(700px) rotateY(${x*10}deg) rotateX(${-y*10}deg) scale(1.02)`;
+    });
+    card.addEventListener('mouseleave', () => { card.style.transform = ''; });
+  });
+})();
+
+/* ── Magnetic buttons ── */
+(function() {
+  document.querySelectorAll('.magnetic').forEach(btn => {
+    btn.addEventListener('mousemove', e => {
+      const r = btn.getBoundingClientRect();
+      const x = (e.clientX - r.left - r.width  / 2) * 0.35;
+      const y = (e.clientY - r.top  - r.height / 2) * 0.35;
+      btn.style.transform = `translate(${x}px, ${y}px)`;
+    });
+    btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+  });
+})();
+
+/* ── Smooth scroll for anchor links ── */
+(function() {
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+})();
+</script>
+
 </body>
 </html>
