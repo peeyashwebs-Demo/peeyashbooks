@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@google/genai": "^1.16.0"
+    "openai": "^6.2.0"
   }
 }
