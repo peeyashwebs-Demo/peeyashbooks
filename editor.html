@@ -1,360 +1,1283 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PeeyashBooks Editor</title>
-    <meta
-      name="description"
-      content="Write, publish, and export your ebook with PeeyashBooks."
-    />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://cdn.quilljs.com/1.3.6/quill.snow.css"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body data-page="editor" class="editor-body">
-    <div class="ambient ambient-1"></div>
-    <div class="ambient ambient-2"></div>
-    <div class="noise"></div>
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>PeeyashBooks — Premium Ebook Studio</title>
 
-    <header class="editor-header shell wide">
-      <a class="brand" href="index.html" aria-label="PeeyashBooks home">
-        <span class="brand-mark"></span>
-        <span>PeeyashBooks</span>
-      </a>
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=DM+Sans:wght@300;400;500;600;700&family=Cinzel:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 
-      <div class="editor-header-center">
-        <input
-          id="ebookTitle"
-          class="title-input"
-          type="text"
-          placeholder="Untitled ebook"
-          maxlength="120"
-          aria-label="Ebook title"
-        />
-        <input
-          id="ebookAuthor"
-          class="meta-input"
-          type="text"
-          placeholder="Author name"
-          maxlength="80"
-          aria-label="Author name"
-        />
+<!-- Quill -->
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- SortableJS for drag-and-drop -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
+<!-- Flutterwave -->
+<script src="https://checkout.flutterwave.com/v3.js"></script>
+
+<style>
+/* ============================================================
+   ROOT TOKENS
+   ============================================================ */
+:root {
+  --bg:           #07080f;
+  --bg1:          #0d0f1c;
+  --bg2:          #12152a;
+  --bg3:          #181c36;
+  --glass:        rgba(255,255,255,0.04);
+  --glass-hover:  rgba(255,255,255,0.07);
+  --glass-active: rgba(91,115,255,0.12);
+  --border:       rgba(255,255,255,0.07);
+  --border-glow:  rgba(91,115,255,0.4);
+
+  --blue:         #5b73ff;
+  --purple:       #9b5fe0;
+  --cyan:         #3ecfcf;
+  --pink:         #ff5fa0;
+  --amber:        #f5a623;
+  --green:        #2dd4a2;
+
+  --grad:         linear-gradient(135deg,#5b73ff,#9b5fe0);
+  --grad2:        linear-gradient(135deg,#3ecfcf,#5b73ff);
+  --grad-gold:    linear-gradient(135deg,#f5a623,#ff5fa0);
+
+  --text:         #eef0ff;
+  --text2:        #8890b8;
+  --text3:        #535a7a;
+
+  --r-sm: 6px; --r-md: 12px; --r-lg: 18px; --r-xl: 24px; --r-2xl: 32px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.5);
+  --glow:   0 0 40px rgba(91,115,255,0.2);
+  --glow2:  0 0 80px rgba(91,115,255,0.12);
+
+  --sidebar-w: 300px;
+  --header-h:  60px;
+  --ease:      cubic-bezier(0.4,0,0.2,1);
+  --spring:    cubic-bezier(0.34,1.56,0.64,1);
+}
+
+/* ============================================================
+   LOADING SCREEN
+   ============================================================ */
+#loader {
+  position: fixed; inset: 0; z-index: 99999;
+  background: #07080f;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
+}
+#loader.fade-out { opacity: 0; pointer-events: none; transform: scale(1.03) }
+.loader-glow {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 50%, rgba(91,115,255,0.22) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 30% at 30% 40%, rgba(155,95,224,0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 70% 60%, rgba(62,207,207,0.1) 0%, transparent 60%);
+  animation: loaderPulse 3s ease-in-out infinite alternate;
+}
+@keyframes loaderPulse { to { opacity: 0.6 } }
+.loader-particles {
+  position: absolute; inset: 0; overflow: hidden;
+}
+.loader-particle {
+  position: absolute;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--blue);
+  animation: floatParticle linear infinite;
+  opacity: 0;
+}
+@keyframes floatParticle {
+  0%   { opacity: 0; transform: translateY(0) scale(0.5) }
+  20%  { opacity: 1 }
+  80%  { opacity: 0.5 }
+  100% { opacity: 0; transform: translateY(-100vh) scale(1.5) }
+}
+.loader-logo {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+}
+.loader-icon {
+  width: 80px; height: 80px;
+  background: var(--grad);
+  border-radius: 22px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 38px;
+  box-shadow: 0 0 60px rgba(91,115,255,0.5), 0 0 120px rgba(91,115,255,0.2);
+  animation: loaderIconPulse 2s ease-in-out infinite alternate;
+}
+@keyframes loaderIconPulse {
+  from { box-shadow: 0 0 60px rgba(91,115,255,0.5), 0 0 120px rgba(91,115,255,0.2); transform: scale(1) }
+  to   { box-shadow: 0 0 80px rgba(155,95,224,0.6), 0 0 160px rgba(155,95,224,0.25); transform: scale(1.05) }
+}
+.loader-name {
+  font-family: 'Cinzel', serif;
+  font-size: 28px; font-weight: 600;
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 2px;
+}
+.loader-tagline {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px; color: var(--text3);
+  letter-spacing: 3px; text-transform: uppercase;
+  margin-top: -8px;
+}
+.loader-bar-wrap {
+  width: 240px; height: 2px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 32px;
+}
+.loader-bar {
+  height: 100%;
+  background: var(--grad);
+  border-radius: 99px;
+  width: 0%;
+  animation: loaderBar 2.4s var(--ease) forwards;
+  box-shadow: 0 0 12px var(--blue);
+}
+@keyframes loaderBar { to { width: 100% } }
+.loader-status {
+  font-size: 11px; color: var(--text3);
+  letter-spacing: 1px; margin-top: 12px;
+  font-family: 'Inter', sans-serif;
+  animation: statusFade 0.5s ease;
+}
+@keyframes statusFade { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+
+/* ============================================================
+   RESET
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+html { scroll-behavior: smooth }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Inter', 'DM Sans', sans-serif;
+  font-size: 14px; line-height: 1.6;
+  min-height: 100vh; overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 15% -10%, rgba(91,115,255,0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 85% 110%, rgba(155,95,224,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(62,207,207,0.04) 0%, transparent 70%);
+}
+body > * { position: relative; z-index: 1 }
+
+::-webkit-scrollbar { width: 4px }
+::-webkit-scrollbar-track { background: transparent }
+::-webkit-scrollbar-thumb { background: rgba(91,115,255,0.3); border-radius: 99px }
+::-webkit-scrollbar-thumb:hover { background: rgba(91,115,255,0.5) }
+
+/* ============================================================
+   AMBIENT ORBS
+   ============================================================ */
+.ambient-orb {
+  position: fixed; border-radius: 50%;
+  filter: blur(80px); pointer-events: none; z-index: 0;
+  animation: orbDrift 20s ease-in-out infinite alternate;
+}
+.orb-1 { width: 500px; height: 500px; background: rgba(91,115,255,0.08); top: -200px; left: -150px }
+.orb-2 { width: 400px; height: 400px; background: rgba(155,95,224,0.08); bottom: -150px; right: -100px; animation-delay: -8s }
+.orb-3 { width: 300px; height: 300px; background: rgba(62,207,207,0.05); top: 50%; left: 50%; transform: translate(-50%,-50%); animation-delay: -4s }
+@keyframes orbDrift {
+  0%   { transform: translate(0,0) scale(1) }
+  33%  { transform: translate(40px,-30px) scale(1.1) }
+  66%  { transform: translate(-20px,40px) scale(0.9) }
+  100% { transform: translate(30px,20px) scale(1.05) }
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+#header {
+  position: fixed; top: 0; left: 0; right: 0; height: var(--header-h);
+  background: rgba(7,8,15,0.85);
+  backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 16px; z-index: 1000;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.03), 0 4px 24px rgba(0,0,0,0.3);
+}
+.logo {
+  display: flex; align-items: center; gap: 9px;
+  font-family: 'Cinzel', serif; font-size: 14px; font-weight: 600;
+  letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0;
+  text-decoration: none; color: var(--text);
+  transition: all 0.3s var(--ease);
+}
+.logo:hover { transform: scale(1.02) }
+.logo-icon {
+  width: 32px; height: 32px; background: var(--grad);
+  border-radius: 9px; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; box-shadow: 0 0 20px rgba(91,115,255,0.4);
+  transition: all 0.3s var(--ease);
+}
+.logo:hover .logo-icon { box-shadow: 0 0 30px rgba(91,115,255,0.6); transform: rotate(-5deg) }
+.logo-text span { color: var(--blue) }
+.hdiv { width: 1px; height: 28px; background: var(--border); flex-shrink: 0 }
+
+.header-input {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px;
+  padding: 6px 12px; outline: none; transition: all 0.25s var(--ease);
+}
+.header-input::placeholder { color: var(--text3) }
+.header-input:focus {
+  border-color: var(--border-glow);
+  background: rgba(91,115,255,0.08);
+  box-shadow: 0 0 0 3px rgba(91,115,255,0.1);
+}
+#ebook-title-input { width: 200px; font-weight: 500 }
+#author-input { width: 140px }
+
+.save-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text3); flex-shrink: 0 }
+.save-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--cyan); box-shadow: 0 0 8px var(--cyan);
+  animation: pulseDot 2s ease-in-out infinite;
+}
+@keyframes pulseDot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.save-dot.saving { background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: spinDot 0.7s linear infinite }
+@keyframes spinDot { to { transform: rotate(360deg) } }
+
+.hspace { flex: 1 }
+.hactions { display: flex; align-items: center; gap: 6px }
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: var(--r-sm);
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
+  cursor: pointer; border: none; outline: none;
+  transition: all 0.22s var(--ease); white-space: nowrap; flex-shrink: 0;
+  text-decoration: none; letter-spacing: 0.2px;
+  position: relative; overflow: hidden;
+}
+.btn::before {
+  content: ''; position: absolute; inset: 0;
+  background: rgba(255,255,255,0);
+  transition: background 0.2s;
+}
+.btn:hover::before { background: rgba(255,255,255,0.06) }
+.btn:active { transform: scale(0.97) }
+
+.btn-ghost { background: var(--glass); color: var(--text2); border: 1px solid var(--border) }
+.btn-ghost:hover { background: var(--glass-hover); color: var(--text); border-color: rgba(255,255,255,0.14); transform: translateY(-1px) }
+.btn-primary { background: var(--grad); color: #fff; box-shadow: 0 4px 16px rgba(91,115,255,0.35) }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(91,115,255,0.5) }
+.btn-success { background: linear-gradient(135deg,#2dd4a2,#1fa882); color: #fff; box-shadow: 0 4px 16px rgba(45,212,162,0.3) }
+.btn-success:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(45,212,162,0.45) }
+.btn-amber { background: var(--grad-gold); color: #fff; box-shadow: 0 4px 16px rgba(245,166,35,0.3) }
+.btn-amber:hover { transform: translateY(-2px) }
+.btn-danger { background: linear-gradient(135deg,#ff5fa0,#cc2e6c); color: #fff }
+.btn-sm { padding: 5px 11px; font-size: 12px }
+.btn-xs { padding: 3px 9px; font-size: 11px }
+.btn-icon { width: 32px; height: 32px; padding: 0; justify-content: center; border-radius: var(--r-sm) }
+
+/* Magnetic button effect - applied via JS */
+.btn-magnetic { transition: all 0.3s var(--spring) }
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+#app {
+  display: flex;
+  margin-top: var(--header-h);
+  height: calc(100vh - var(--header-h));
+  overflow: hidden;
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+#sidebar {
+  width: var(--sidebar-w); flex-shrink: 0;
+  background: rgba(13,15,28,0.9);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  transition: width 0.35s var(--ease);
+}
+#sidebar.collapsed { width: 56px }
+
+.sidebar-tabs {
+  display: flex; padding: 10px 10px 0; gap: 3px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.tab-btn {
+  flex: 1; padding: 8px 4px;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  border: none; background: transparent;
+  color: var(--text3);
+  font-family: 'Inter', sans-serif; font-size: 9px; font-weight: 600;
+  cursor: pointer; transition: all 0.22s var(--ease);
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  letter-spacing: 0.5px; text-transform: uppercase;
+}
+.tab-btn svg { opacity: 0.5; transition: all 0.22s var(--ease) }
+.tab-btn:hover { color: var(--text2); background: var(--glass) }
+.tab-btn.active { color: var(--blue); background: rgba(91,115,255,0.09) }
+.tab-btn.active svg { opacity: 1 }
+
+.tab-panel { display: none; flex: 1; flex-direction: column; overflow-y: auto; padding: 14px; gap: 10px }
+.tab-panel.active { display: flex }
+.slabel { font-size: 9.5px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 700; margin-bottom: 2px; margin-top: 2px }
+
+/* ============================================================
+   CHAPTERS
+   ============================================================ */
+.chapter-controls { display: flex; gap: 5px }
+.chapter-controls .btn { flex: 1; justify-content: center; padding: 7px 6px; font-size: 12px }
+#chapter-list { display: flex; flex-direction: column; gap: 5px; flex: 1 }
+
+/* drag handle visual */
+.sortable-ghost { opacity: 0.4 }
+.sortable-chosen { box-shadow: 0 8px 32px rgba(91,115,255,0.4) !important }
+
+.chapter-card {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  cursor: pointer; transition: all 0.22s var(--ease);
+  position: relative; overflow: hidden;
+}
+.chapter-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--grad); opacity: 0; transition: opacity 0.22s;
+  border-radius: 99px;
+}
+.chapter-card::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 80% at 50% 120%, rgba(91,115,255,0.08) 0%, transparent 70%);
+  opacity: 0; transition: opacity 0.3s;
+}
+.chapter-card:hover { background: var(--glass-hover); border-color: rgba(255,255,255,0.12); transform: translateX(2px) }
+.chapter-card:hover::after { opacity: 1 }
+.chapter-card.active { background: var(--glass-active); border-color: var(--border-glow) }
+.chapter-card.active::before { opacity: 1 }
+
+.ch-drag { cursor: grab; color: var(--text3); font-size: 11px; padding-right: 4px; flex-shrink: 0; opacity: 0; transition: opacity 0.2s }
+.chapter-card:hover .ch-drag { opacity: 1 }
+.ch-title { font-size: 13px; font-weight: 500; color: var(--text); display: flex; align-items: center; gap: 5px; margin-bottom: 3px }
+.ch-num { width: 18px; height: 18px; border-radius: 4px; background: var(--grad); display: inline-flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; flex-shrink: 0 }
+.ch-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.ch-actions { margin-left: auto; display: flex; gap: 3px; opacity: 0; transition: opacity 0.2s }
+.chapter-card:hover .ch-actions { opacity: 1 }
+.ch-btn { width: 22px; height: 22px; border-radius: 4px; border: none; background: rgba(255,255,255,0.06); color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.18s; font-size: 11px }
+.ch-btn:hover { background: rgba(255,80,80,0.2); color: #ff8080 }
+.ch-btn.rename:hover { background: rgba(91,115,255,0.2); color: var(--blue) }
+.ch-btn.dupe:hover { background: rgba(62,207,207,0.2); color: var(--cyan) }
+.ch-meta { display: flex; gap: 8px; align-items: center }
+.ch-words { font-size: 10px; color: var(--text3) }
+.ch-readtime { font-size: 10px; color: var(--text3); opacity: 0.7 }
+
+/* Focus mode toggle in topbar */
+.focus-mode-btn { font-size: 11px }
+
+/* ============================================================
+   DESIGN TAB
+   ============================================================ */
+.cover-preview-box {
+  background: var(--glass); border: 1px solid var(--border);
+  border-radius: var(--r-md); overflow: hidden;
+  aspect-ratio: 3/4; position: relative; cursor: pointer;
+  transition: all 0.3s var(--ease);
+}
+.cover-preview-box:hover { border-color: var(--border-glow); box-shadow: var(--glow) }
+#cover-bg-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none }
+.cover-overlay { position: absolute; inset: 0; background: linear-gradient(180deg,rgba(7,8,15,0.2) 0%,rgba(7,8,15,0.8) 100%) }
+#cover-canvas { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px }
+.cover-text-wrap { position: relative; z-index: 2 }
+#cover-title-display { font-family: 'Cinzel', serif; font-size: 15px; font-weight: 600; color: #fff; line-height: 1.3; margin-bottom: 10px; text-shadow: 0 2px 16px rgba(0,0,0,0.8) }
+.cover-divider { width: 36px; height: 1.5px; background: var(--grad); margin: 0 auto 9px; border-radius: 99px }
+#cover-author-display { font-size: 10px; color: rgba(255,255,255,0.65); letter-spacing: 1.5px; text-transform: uppercase }
+
+/* Cover templates */
+.cover-templates { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-top: 4px }
+.cover-template {
+  aspect-ratio: 3/4; border-radius: var(--r-sm); cursor: pointer;
+  border: 2px solid transparent; transition: all 0.22s; overflow: hidden;
+  position: relative;
+}
+.cover-template:hover { border-color: var(--blue); transform: scale(1.04) }
+.cover-template.active { border-color: var(--blue); box-shadow: 0 0 12px rgba(91,115,255,0.4) }
+.cover-template .ct-label { position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; font-size: 8px; color: rgba(255,255,255,0.7); font-weight: 600; letter-spacing: 0.5px }
+
+/* Watermark row */
+.watermark-row { display: flex; align-items: center; gap: 8px; background: rgba(245,166,35,0.07); border: 1px solid rgba(245,166,35,0.2); border-radius: var(--r-md); padding: 10px 12px }
+.watermark-info { flex: 1; font-size: 11.5px; color: var(--text2); line-height: 1.5 }
+.watermark-info strong { color: var(--amber) }
+
+/* TOC */
+#toc-list { display: flex; flex-direction: column; gap: 4px }
+.toc-item { display: flex; align-items: center; gap: 6px; background: var(--glass); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 7px 10px; font-size: 12px; color: var(--text2); transition: all 0.2s }
+.toc-item:hover { background: var(--glass-hover); color: var(--text) }
+.toc-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--blue); flex-shrink: 0 }
+.toc-text { flex: 1; outline: none; background: transparent; border: none; color: inherit; font-family: 'Inter', sans-serif; font-size: 12px; cursor: text }
+.toc-remove { width: 18px; height: 18px; border-radius: 3px; background: transparent; border: none; color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: all 0.18s; font-size: 11px }
+.toc-item:hover .toc-remove { opacity: 1 }
+.toc-remove:hover { background: rgba(255,80,80,0.2); color: #ff8080 }
+
+/* ============================================================
+   AI TAB
+   ============================================================ */
+.ai-chips { display: flex; flex-wrap: wrap; gap: 5px }
+.ai-chip {
+  padding: 5px 11px; border-radius: 99px;
+  border: 1px solid var(--border); background: var(--glass);
+  color: var(--text2); font-size: 11px; font-weight: 500;
+  cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px;
+}
+.ai-chip:hover { background: rgba(91,115,255,0.12); border-color: var(--border-glow); color: var(--text) }
+.ai-chip.active-chip { background: rgba(91,115,255,0.18); border-color: var(--blue); color: var(--blue) }
+
+.ai-tone-row { display: flex; gap: 5px; flex-wrap: wrap }
+.ai-tone {
+  padding: 4px 10px; border-radius: 99px;
+  border: 1px solid var(--border); background: var(--glass);
+  color: var(--text3); font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+  cursor: pointer; transition: all 0.18s; text-transform: uppercase;
+}
+.ai-tone:hover { border-color: var(--cyan); color: var(--cyan) }
+.ai-tone.active-tone { border-color: var(--cyan); background: rgba(62,207,207,0.1); color: var(--cyan) }
+
+.ai-prompt-box {
+  background: var(--glass); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 10px 12px;
+  color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px;
+  width: 100%; min-height: 78px; resize: vertical; outline: none;
+  transition: all 0.25s; line-height: 1.6;
+}
+.ai-prompt-box:focus { border-color: var(--border-glow); background: rgba(91,115,255,0.06); box-shadow: 0 0 0 3px rgba(91,115,255,0.08) }
+.ai-prompt-box::placeholder { color: var(--text3) }
+
+.ai-response-box {
+  background: rgba(91,115,255,0.06); border: 1px solid rgba(91,115,255,0.2);
+  border-radius: var(--r-md); padding: 12px; font-size: 13px; line-height: 1.75;
+  color: var(--text2); display: none; position: relative;
+}
+.ai-response-box.visible { display: block }
+.ai-response-box::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: var(--grad); border-radius: 99px 99px 0 0;
+  box-shadow: 0 0 8px var(--blue);
+}
+.ai-thinking { display: flex; align-items: center; gap: 8px; color: var(--blue); font-size: 12px }
+.ai-dots span { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--blue); margin: 0 1px; animation: bounceDot 1.2s ease-in-out infinite }
+.ai-dots span:nth-child(2) { animation-delay: .2s }
+.ai-dots span:nth-child(3) { animation-delay: .4s }
+@keyframes bounceDot { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-7px)} }
+
+/* ============================================================
+   STATS TAB
+   ============================================================ */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px }
+.stat-card {
+  background: var(--glass); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 14px 12px; text-align: center;
+  transition: all 0.25s var(--ease);
+}
+.stat-card:hover { background: var(--glass-hover); border-color: rgba(255,255,255,0.1); transform: translateY(-2px); box-shadow: var(--shadow) }
+.stat-value { font-size: 26px; font-weight: 700; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.1; margin-bottom: 4px }
+.stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); font-weight: 700 }
+.progress-bar-wrap { background: var(--glass); border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px }
+.progress-label-row { display: flex; justify-content: space-between; margin-bottom: 8px }
+.progress-label { font-size: 11px; color: var(--text3); font-weight: 500 }
+.progress-track { height: 4px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden }
+.progress-fill { height: 100%; background: var(--grad); border-radius: 99px; transition: width 0.8s var(--ease); width: 0% }
+
+/* ============================================================
+   EDITOR WORKSPACE
+   ============================================================ */
+#editor-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg1) }
+
+.editor-topbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 20px; border-bottom: 1px solid var(--border);
+  background: rgba(13,15,28,0.7); flex-shrink: 0;
+  backdrop-filter: blur(10px);
+}
+.chapter-breadcrumb { font-size: 12px; color: var(--text3); display: flex; align-items: center; gap: 5px }
+.chapter-breadcrumb .active-ch-name { color: var(--text); font-weight: 500 }
+.tbspace { flex: 1 }
+.word-live { font-size: 11px; color: var(--text3) }
+.word-live span { color: var(--blue); font-weight: 600 }
+
+.editor-scroll {
+  flex: 1; overflow-y: auto;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 40px 20px 100px;
+  scroll-behavior: smooth;
+}
+
+#editor-container {
+  width: 100%; max-width: 780px;
+  min-height: calc(100vh - 220px);
+  background: rgba(255,255,255,0.022);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow), var(--glow2);
+  transition: all 0.35s var(--ease);
+}
+#editor-container:focus-within {
+  border-color: rgba(91,115,255,0.28);
+  box-shadow: var(--shadow), 0 0 80px rgba(91,115,255,0.12);
+}
+
+/* Focus mode */
+body.focus-mode #sidebar { width: 0; overflow: hidden }
+body.focus-mode .editor-topbar .chapter-breadcrumb,
+body.focus-mode .editor-topbar .word-live { opacity: 0 }
+body.focus-mode #editor-container { max-width: 680px; border-color: transparent; background: transparent }
+body.focus-mode .editor-scroll { padding-top: 60px }
+
+.ql-container.ql-snow { border: none !important; background: transparent !important }
+
+/* Reading progress bar */
+#reading-progress {
+  position: fixed; top: var(--header-h); left: 0; right: 0; height: 2px;
+  background: rgba(255,255,255,0.04); z-index: 999;
+}
+#reading-progress-fill {
+  height: 100%; background: var(--grad);
+  border-radius: 99px; width: 0%;
+  transition: width 0.2s; box-shadow: 0 0 8px var(--blue);
+}
+
+/* ============================================================
+   MODALS — BASE
+   ============================================================ */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(12px) saturate(160%);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2000; opacity: 0; pointer-events: none;
+  transition: opacity 0.3s var(--ease);
+  padding: 20px;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all }
+.modal {
+  background: var(--bg2);
+  border: 1px solid rgba(91,115,255,0.22);
+  border-radius: var(--r-xl);
+  padding: 28px; width: 90%; max-width: 520px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03), var(--glow);
+  transform: translateY(24px) scale(0.96);
+  transition: transform 0.35s var(--spring);
+  max-height: 90vh; overflow-y: auto;
+  position: relative;
+}
+.modal::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: var(--grad); border-radius: 99px 99px 0 0;
+  box-shadow: 0 0 16px var(--blue);
+}
+.modal-overlay.open .modal { transform: translateY(0) scale(1) }
+.modal-wide { max-width: 860px }
+.modal-xl { max-width: 1100px }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px }
+.modal-title { font-family: 'Cinzel', serif; font-size: 17px; font-weight: 600; letter-spacing: 0.3px }
+.modal-close {
+  width: 28px; height: 28px; border-radius: 6px;
+  background: var(--glass); border: none; color: var(--text3);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; font-size: 14px;
+}
+.modal-close:hover { background: rgba(255,80,80,0.15); color: #ff8080 }
+.modal-body { display: flex; flex-direction: column; gap: 14px }
+.modal-row { display: flex; gap: 8px }
+.modal-row .btn { flex: 1; justify-content: center }
+.modal-section-title { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); font-weight: 700; margin-bottom: 2px }
+
+/* Payment notice */
+.payment-notice {
+  background: rgba(91,115,255,0.07); border: 1px solid rgba(91,115,255,0.2);
+  border-radius: var(--r-md); padding: 12px 14px;
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 12.5px; color: var(--text2); line-height: 1.55;
+}
+.pn-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px }
+.payment-notice strong { color: var(--blue) }
+
+/* Publish options */
+.publish-option { border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; transition: border-color 0.2s }
+.publish-option:hover { border-color: rgba(255,255,255,0.1) }
+.publish-option-header { padding: 14px 16px; display: flex; align-items: center; gap: 12px; background: var(--glass) }
+.publish-option-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0 }
+.publish-option-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px }
+.publish-option-desc { font-size: 11.5px; color: var(--text3) }
+.publish-option-body { padding: 12px 16px; border-top: 1px solid var(--border) }
+.custom-slug-input {
+  width: 100%; background: var(--glass); border: 1px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text);
+  font-family: 'Inter', sans-serif; font-size: 13px;
+  padding: 8px 12px; outline: none; transition: all 0.22s; margin-bottom: 10px;
+}
+.custom-slug-input:focus { border-color: var(--border-glow); box-shadow: 0 0 0 3px rgba(91,115,255,0.1) }
+.custom-slug-input::placeholder { color: var(--text3) }
+.publish-link-box {
+  background: var(--glass); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 10px 12px;
+  font-size: 12px; color: var(--blue); word-break: break-all; display: none; margin-top: 6px;
+}
+.publish-link-box.visible { display: block }
+
+/* Export checkboxes */
+.export-checkbox-group { display: flex; flex-direction: column; gap: 8px }
+.export-checkbox-group label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text2) }
+.export-checkbox-group input[type="checkbox"] { accent-color: var(--blue); width: 14px; height: 14px }
+
+/* Preview link button */
+.preview-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--cyan); cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px;
+  border: none; background: none; padding: 0;
+  transition: color 0.2s; font-family: 'Inter', sans-serif;
+}
+.preview-link:hover { color: #fff }
+
+/* ============================================================
+   PREVIEW MODAL
+   ============================================================ */
+.preview-layout { display: grid; grid-template-columns: 200px 1fr; gap: 20px; align-items: start }
+.preview-book-stage { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px 0 }
+
+/* ============================================================
+   3D BOOK
+   ============================================================ */
+.book-3d-wrap { perspective: 1200px; width: 150px; height: 210px }
+.book-3d {
+  width: 150px; height: 210px;
+  transform-style: preserve-3d;
+  transform: rotateY(-28deg) rotateX(6deg);
+  transition: transform 0.6s var(--ease);
+  cursor: pointer;
+  animation: bookFloat 5s ease-in-out infinite;
+  position: relative;
+}
+.book-3d:hover { transform: rotateY(-12deg) rotateX(4deg) scale(1.04) }
+@keyframes bookFloat {
+  0%,100% { transform: rotateY(-28deg) rotateX(6deg) translateY(0) }
+  50%      { transform: rotateY(-28deg) rotateX(6deg) translateY(-10px) }
+}
+.book-3d.book-loaded {
+  animation: bookEntrance 0.9s var(--spring) forwards, bookFloat 5s ease-in-out 0.9s infinite
+}
+@keyframes bookEntrance {
+  from { transform: rotateY(-90deg) rotateX(12deg) scale(0.75); opacity: 0 }
+  to   { transform: rotateY(-28deg) rotateX(6deg) scale(1); opacity: 1 }
+}
+.book-face { position: absolute; backface-visibility: hidden }
+.book-front {
+  width: 150px; height: 210px;
+  background: var(--grad);
+  border-radius: 2px 6px 6px 2px;
+  left: 0; top: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 16px 12px; text-align: center;
+  box-shadow: 6px 0 20px rgba(0,0,0,0.5), inset -4px 0 10px rgba(0,0,0,0.25);
+  transform: translateZ(18px);
+  background-size: cover; background-position: center;
+}
+.book-front-title { font-family: 'Cinzel', serif; font-size: 12px; font-weight: 600; color: #fff; line-height: 1.3; margin-bottom: 9px; text-shadow: 0 1px 6px rgba(0,0,0,0.5) }
+.book-front-line { width: 28px; height: 1.5px; background: rgba(255,255,255,0.5); margin: 0 auto 8px; border-radius: 99px }
+.book-front-author { font-size: 8px; color: rgba(255,255,255,0.7); letter-spacing: 1.5px; text-transform: uppercase }
+.book-spine {
+  width: 36px; height: 210px;
+  background: linear-gradient(135deg,#3d52cc,#6b3db5);
+  left: -36px; top: 0;
+  display: flex; align-items: center; justify-content: center;
+  transform: rotateY(-90deg) translateZ(18px) translateX(18px);
+  box-shadow: -4px 0 16px rgba(0,0,0,0.4);
+}
+.spine-title {
+  font-family: 'Cinzel', serif; font-size: 7px; color: rgba(255,255,255,0.65);
+  letter-spacing: 2px; text-transform: uppercase;
+  writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);
+  max-height: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.book-back {
+  width: 150px; height: 210px; background: #0d1030;
+  left: 0; top: 0; transform: translateZ(-18px) rotateY(180deg);
+  border-radius: 6px 2px 2px 6px;
+}
+.book-shadow {
+  width: 130px; height: 18px;
+  background: radial-gradient(ellipse, rgba(0,0,0,0.55) 0%, transparent 70%);
+  filter: blur(6px); margin-top: -6px;
+}
+.book-stage-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text3); margin-bottom: 4px; font-weight: 700 }
+
+/* Preview body */
+.preview-body-wrap { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: var(--r-lg); height: 520px; overflow-y: auto }
+#preview-body { padding: 0 }
+
+/* Preview page internal styles */
+.prev-cover { min-height: 220px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg,#0d0f1c,#12152a); text-align: center; padding: 40px 24px; position: relative; background-size: cover; background-position: center }
+.prev-cover-overlay { position: absolute; inset: 0; background: linear-gradient(180deg,rgba(7,8,15,0.3) 0%,rgba(7,8,15,0.7) 100%) }
+.prev-cover-inner { position: relative; z-index: 1 }
+.prev-badge { font-family: 'Cinzel', serif; font-size: 8px; letter-spacing: 3px; text-transform: uppercase; color: rgba(91,115,255,0.8); margin-bottom: 12px }
+.prev-title { font-family: 'Cinzel', serif; font-size: clamp(1.3rem,4vw,1.8rem); background: linear-gradient(135deg,#6e88ff,#c780ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.2; margin-bottom: 12px }
+.prev-line { width: 36px; height: 1.5px; background: linear-gradient(90deg,#5b73ff,#9b5fe0); margin: 0 auto 10px; border-radius: 99px }
+.prev-author { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 2px; text-transform: uppercase }
+.prev-section { padding: 28px 28px; border-top: 1px solid rgba(255,255,255,0.05) }
+.prev-section:first-child { border-top: none }
+.prev-section-title { font-family: 'Cinzel', serif; font-size: 1.1rem; color: #5b73ff; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.06) }
+.prev-toc-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; color: rgba(255,255,255,0.5) }
+.prev-toc-num { font-family: 'Cinzel', serif; color: #5b73ff; font-size: 9px; min-width: 22px; flex-shrink: 0 }
+.prev-ch-label { font-family: 'Cinzel', serif; font-size: 8px; letter-spacing: 2.5px; text-transform: uppercase; color: #9b5fe0; margin-bottom: 8px }
+.prev-ch-title { font-family: 'Cinzel', serif; font-size: 1.3rem; background: linear-gradient(135deg,#5b73ff,#9b5fe0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid rgba(91,115,255,0.15) }
+.prev-ch-body { font-family: 'Cormorant Garamond', serif; font-size: 16px; line-height: 1.85; color: #c4caef }
+.prev-ch-body p { margin-bottom: 1.2em }
+.prev-ch-body h1,.prev-ch-body h2,.prev-ch-body h3 { font-family: 'Cinzel', serif; color: #7b8fff; margin: 1.4em 0 0.5em; -webkit-text-fill-color: initial }
+.prev-ch-body blockquote { border-left: 2px solid #9b5fe0; padding-left: 16px; color: #7880b0; font-style: italic; margin: 1.2em 0 }
+.prev-watermark { text-align: center; padding: 16px; font-size: 9px; color: rgba(255,255,255,0.1); letter-spacing: 2px; text-transform: uppercase }
+
+/* ============================================================
+   SHOWCASE MODAL
+   ============================================================ */
+.showcase-layout { display: grid; grid-template-columns: 260px 1fr; gap: 24px; align-items: start }
+.showcase-book-stage {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 24px 18px;
+  position: sticky; top: 0;
+}
+.sc-title { font-family: 'Cinzel', serif; font-size: 1.35rem; font-weight: 600; color: var(--text); margin-bottom: 4px; line-height: 1.3 }
+.sc-author { font-size: 13px; color: var(--text3); margin-bottom: 12px }
+.sc-meta-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px }
+.sc-badge { background: rgba(91,115,255,0.1); border: 1px solid rgba(91,115,255,0.2); border-radius: 99px; padding: 4px 11px; font-size: 11px; color: var(--blue); font-weight: 500 }
+.sc-description { background: var(--glass); border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px; font-size: 13px; color: var(--text2); line-height: 1.65; margin-bottom: 14px }
+.sc-price-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px }
+.sc-price-box { background: var(--glass); border: 1px solid var(--border); border-radius: var(--r-md); padding: 11px }
+.sc-price-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); font-weight: 700; margin-bottom: 7px }
+.sc-price-input-wrap { display: flex; align-items: center; gap: 4px }
+.sc-currency { font-size: 14px; font-weight: 700; color: var(--blue); flex-shrink: 0 }
+.sc-price-input { flex: 1; background: transparent; border: none; color: var(--text); font-family: 'Inter', sans-serif; font-size: 18px; font-weight: 700; outline: none; width: 100% }
+.sc-select { width: 100%; background: var(--glass); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); font-family: 'Inter', sans-serif; font-size: 12px; padding: 6px 8px; outline: none; cursor: pointer }
+.sc-select option { background: #12152a }
+.sc-actions { display: flex; gap: 7px; margin-bottom: 12px }
+.sc-actions .btn { flex: 1; justify-content: center }
+.sc-success-banner { background: rgba(45,212,162,0.08); border: 1px solid rgba(45,212,162,0.25); border-radius: var(--r-md); padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--text2); line-height: 1.55 }
+.sc-success-banner strong { color: var(--green) }
+
+.sc-listings-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border) }
+.sc-listings-section-title { font-family: 'Cinzel', serif; font-size: 13px; color: var(--text2); margin-bottom: 12px }
+#sc-listings-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(130px,1fr)); gap: 10px }
+.sc-listing-card { background: var(--glass); border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; transition: all 0.25s var(--ease); cursor: pointer }
+.sc-listing-card:hover { border-color: var(--border-glow); transform: translateY(-3px); box-shadow: var(--glow) }
+.sc-listing-cover { height: 90px; background: var(--grad); display: flex; align-items: center; justify-content: center; padding: 8px; text-align: center; background-size: cover; background-position: center }
+.sc-listing-cover-title { font-family: 'Cinzel', serif; font-size: 9px; color: #fff; line-height: 1.3; text-shadow: 0 1px 4px rgba(0,0,0,0.5) }
+.sc-listing-info { padding: 9px }
+.sc-listing-title { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.sc-listing-author { font-size: 9px; color: var(--text3); margin-bottom: 3px }
+.sc-listing-meta { font-size: 9px; color: var(--text3) }
+.sc-listing-price { font-size: 12px; font-weight: 700; color: var(--blue); margin-top: 3px }
+.sc-listing-category { font-size: 8px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 2px }
+.sc-empty { text-align: center; padding: 24px; color: var(--text3); font-size: 12px; border: 1px dashed var(--border); border-radius: var(--r-md) }
+
+/* ============================================================
+   TOASTS
+   ============================================================ */
+#toast-container { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 9999 }
+.toast {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 12px 18px;
+  font-size: 13px; font-family: 'Inter', sans-serif;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  transform: translateX(120%); transition: transform 0.35s var(--spring);
+  min-width: 240px; max-width: 320px;
+  position: relative; overflow: hidden;
+}
+.toast::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px }
+.toast.success::before { background: var(--cyan) }
+.toast.error::before { background: #ff8080 }
+.toast.info::before { background: var(--blue) }
+.toast.warning::before { background: var(--amber) }
+.toast.show { transform: translateX(0) }
+.toast-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0 }
+.toast.success .toast-icon { background: rgba(62,207,207,0.2); color: var(--cyan) }
+.toast.error   .toast-icon { background: rgba(255,80,80,0.2); color: #ff8080 }
+.toast.info    .toast-icon { background: rgba(91,115,255,0.2); color: var(--blue) }
+.toast.warning .toast-icon { background: rgba(245,166,35,0.2); color: var(--amber) }
+
+/* ============================================================
+   MISC
+   ============================================================ */
+.inline-rename { width: 100%; background: transparent; border: none; border-bottom: 1px solid var(--blue); color: var(--text); font-size: 13px; font-weight: 500; font-family: 'Inter', sans-serif; outline: none; padding: 2px 0 }
+.divider { height: 1px; background: var(--border); margin: 4px 0 }
+.empty-state { text-align: center; padding: 22px 12px; color: var(--text3); font-size: 12px; border: 1px dashed var(--border); border-radius: var(--r-md); display: flex; flex-direction: column; align-items: center; gap: 8px }
+.empty-state-icon { font-size: 22px; opacity: 0.4 }
+input[type="file"] { display: none }
+.tilt-card { transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease) }
+
+/* reveal on scroll */
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease) }
+.reveal.visible { opacity: 1; transform: none }
+
+@keyframes fadeSlideUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:none} }
+.fade-in { animation: fadeSlideUp 0.5s var(--ease) forwards }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width:1100px) {
+  .showcase-layout { grid-template-columns: 220px 1fr }
+  .preview-layout { grid-template-columns: 180px 1fr }
+}
+@media (max-width:900px) {
+  :root { --sidebar-w: 260px }
+  .showcase-layout, .preview-layout { grid-template-columns: 1fr }
+  .showcase-book-stage { flex-direction: row; justify-content: center; position: static }
+  #ebook-title-input { width: 150px }
+  #author-input { width: 110px }
+}
+@media (max-width:680px) { #sidebar { display: none } }
+</style>
+</head>
+<body>
+
+<!-- AMBIENT ORBS -->
+<div class="ambient-orb orb-1"></div>
+<div class="ambient-orb orb-2"></div>
+<div class="ambient-orb orb-3"></div>
+
+<!-- ============================================================
+     LOADING SCREEN
+     ============================================================ -->
+<div id="loader">
+  <div class="loader-glow"></div>
+  <div class="loader-particles" id="loader-particles"></div>
+  <div class="loader-logo">
+    <div class="loader-icon">📖</div>
+    <div class="loader-name">PeeyashBooks</div>
+    <div class="loader-tagline">Premium Ebook Studio</div>
+    <div class="loader-bar-wrap"><div class="loader-bar"></div></div>
+    <div class="loader-status" id="loader-status">Initializing studio…</div>
+  </div>
+</div>
+
+<!-- READING PROGRESS -->
+<div id="reading-progress"><div id="reading-progress-fill"></div></div>
+
+<!-- ============================================================
+     HEADER
+     ============================================================ -->
+<header id="header">
+  <a class="logo" href="index.html" aria-label="PeeyashBooks home">
+    <div class="logo-icon">📖</div>
+    <div class="logo-text"><span>Peeyash</span>Books</div>
+  </a>
+  <div class="hdiv"></div>
+  <input id="ebook-title-input" class="header-input" placeholder="Ebook Title…" maxlength="100"/>
+  <input id="author-input" class="header-input" placeholder="Author Name" maxlength="60"/>
+  <div class="save-badge">
+    <div class="save-dot" id="save-dot"></div>
+    <span id="save-status">Saved</span>
+  </div>
+  <div class="hspace"></div>
+  <div class="hactions">
+    <button class="btn btn-ghost btn-magnetic" id="btn-showcase" title="3D Showcase & Marketplace">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      Showcase
+    </button>
+    <button class="btn btn-ghost btn-magnetic" id="btn-preview" title="Preview (Ctrl+Shift+P)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      Preview
+    </button>
+    <button class="btn btn-ghost btn-magnetic" id="btn-export">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export PDF
+    </button>
+    <button class="btn btn-primary btn-magnetic" id="btn-publish">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Publish
+    </button>
+  </div>
+</header>
+
+<!-- ============================================================
+     APP LAYOUT
+     ============================================================ -->
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="sidebar-tabs">
+      <button class="tab-btn active" data-tab="chapters">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        Chapters
+      </button>
+      <button class="tab-btn" data-tab="design">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Design
+      </button>
+      <button class="tab-btn" data-tab="ai">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a2 2 0 012 2v2a2 2 0 01-2 2 2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M12 16a2 2 0 012 2v2a2 2 0 01-2 2 2 2 0 01-2-2v-2a2 2 0 012-2z"/><path d="M4 12a2 2 0 012-2h2a2 2 0 012 2 2 2 0 01-2 2H6a2 2 0 01-2-2z"/><path d="M16 12a2 2 0 012-2h2a2 2 0 012 2 2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        AI
+      </button>
+      <button class="tab-btn" data-tab="stats">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Stats
+      </button>
+    </div>
+
+    <!-- TAB: CHAPTERS -->
+    <div class="tab-panel active" id="tab-chapters">
+      <div>
+        <div class="slabel">Chapter Manager</div>
+        <div class="chapter-controls">
+          <button class="btn btn-ghost" id="btn-add-chapter">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Chapter
+          </button>
+        </div>
       </div>
+      <div id="chapter-list"></div>
+    </div>
 
-      <div class="editor-actions">
-        <span id="saveState" class="save-indicator">Saved</span>
-        <span id="wordCount" class="word-count-pill">0 words</span>
-        <span id="chapterCount" class="chapter-count-pill">1 chapter</span>
-        <button id="publishBtn" class="btn btn-secondary">Publish</button>
-        <button id="downloadBtn" class="btn btn-primary">
-          Download PDF <span class="price-note">₦200</span>
+    <!-- TAB: DESIGN -->
+    <div class="tab-panel" id="tab-design">
+      <div class="slabel">Cover Design</div>
+      <div class="cover-preview-box tilt-card" id="cover-box">
+        <img id="cover-bg-img" alt="Cover"/>
+        <div class="cover-overlay"></div>
+        <div id="cover-canvas">
+          <div class="cover-text-wrap">
+            <div id="cover-title-display">Your Ebook Title</div>
+            <div class="cover-divider"></div>
+            <div id="cover-author-display">Author Name</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:5px">
+        <button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:12px" onclick="document.getElementById('cover-file-input').click()">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload Cover
+        </button>
+        <button class="btn btn-ghost btn-icon" id="btn-remove-cover" title="Remove cover">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
         </button>
       </div>
-    </header>
+      <input type="file" id="cover-file-input" accept="image/*"/>
 
-    <main class="editor-main shell wide">
-      <aside class="editor-side panel reveal-up">
-        <div class="panel-section">
-          <div class="eyebrow">Writing flow</div>
-          <h3>Stay in motion</h3>
-          <p>
-            Your work saves automatically while you write. Keep going —
-            PeeyashBooks is handling the draft state behind the scenes.
-          </p>
+      <!-- Cover templates -->
+      <div class="slabel" style="margin-top:6px">Cover Templates</div>
+      <div class="cover-templates" id="cover-templates"></div>
+
+      <!-- Watermark -->
+      <div class="divider"></div>
+      <div class="slabel">Branding</div>
+      <div class="watermark-row">
+        <div class="watermark-info">
+          <strong>Remove Watermark — ₦50</strong><br>
+          One-time fee to remove the PeeyashBooks footer from all pages.
         </div>
+        <button class="btn btn-amber btn-sm" id="btn-remove-watermark" style="flex-shrink:0">Remove</button>
+      </div>
 
-        <div class="panel-section compact">
-          <div class="mini-label">Chapters</div>
-          <p>
-            Structure your ebook in clear sections so it is easier to write,
-            edit, and export cleanly.
-          </p>
-          <div class="chapter-toolbar">
-            <button id="addChapterBtn" class="btn btn-secondary" type="button">
-              + Add Chapter
-            </button>
-          </div>
-          <div
-            id="chapterList"
-            class="chapter-list"
-            aria-label="Chapter list"
-          ></div>
+      <div class="divider"></div>
+      <div class="slabel">Table of Contents</div>
+      <div id="toc-list"></div>
+      <button class="btn btn-ghost btn-sm" id="btn-add-toc" style="width:100%;justify-content:center;margin-top:4px">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Entry
+      </button>
+      <button class="btn btn-ghost btn-sm" id="btn-sync-toc" style="width:100%;justify-content:center">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+        Sync with Chapters
+      </button>
+    </div>
+
+    <!-- TAB: AI -->
+    <div class="tab-panel" id="tab-ai">
+      <div class="slabel">AI Writing Assistant</div>
+      <div class="ai-chips">
+        <div class="ai-chip" data-action="continue">✍️ Continue</div>
+        <div class="ai-chip" data-action="improve">✨ Improve</div>
+        <div class="ai-chip" data-action="rewrite">🔄 Rewrite Pro</div>
+        <div class="ai-chip" data-action="expand">📐 Expand</div>
+        <div class="ai-chip" data-action="simplify">🎯 Simplify</div>
+        <div class="ai-chip" data-action="emotional">❤️ Emotional</div>
+        <div class="ai-chip" data-action="ideas">💡 Chapter Ideas</div>
+        <div class="ai-chip" data-action="intro">📖 Intro</div>
+        <div class="ai-chip" data-action="conclusion">🏁 Conclusion</div>
+        <div class="ai-chip" data-action="description">📋 Description</div>
+        <div class="ai-chip" data-action="marketing">📣 Marketing</div>
+        <div class="ai-chip" data-action="cta">⚡ CTA</div>
+      </div>
+      <div>
+        <div class="slabel" style="margin-bottom:4px">Tone</div>
+        <div class="ai-tone-row">
+          <div class="ai-tone active-tone" data-tone="professional">Professional</div>
+          <div class="ai-tone" data-tone="casual">Casual</div>
+          <div class="ai-tone" data-tone="formal">Formal</div>
+          <div class="ai-tone" data-tone="creative">Creative</div>
+          <div class="ai-tone" data-tone="inspiring">Inspiring</div>
         </div>
+      </div>
+      <div>
+        <div class="slabel" style="margin-bottom:5px">Your Prompt</div>
+        <textarea class="ai-prompt-box" id="ai-prompt" placeholder="Ask AI to help you write…"></textarea>
+      </div>
+      <div class="ai-response-box" id="ai-response-box"></div>
+      <button class="btn btn-primary" id="btn-ai-generate" style="width:100%;justify-content:center">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Generate with AI
+      </button>
+      <button class="btn btn-ghost" id="btn-ai-insert" style="width:100%;justify-content:center;display:none">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="M5 12l7 7 7-7"/></svg>
+        Insert into Editor
+      </button>
+    </div>
 
-
-        <div class="panel-section compact ai-panel-section">
-          <div class="mini-label">AI outline assistant</div>
-          <p>
-            Build a clean chapter map from any idea without cluttering your writing space.
-          </p>
-
-          <label class="ai-field-label" for="outlinePrompt">Book idea</label>
-          <textarea
-            id="outlinePrompt"
-            class="ai-textarea"
-            rows="4"
-            placeholder="Example: Create a 6 chapter healing book for women rebuilding after heartbreak."
-            aria-label="Outline prompt"
-          ></textarea>
-
-          <div class="ai-action-row">
-            <button id="generateOutlineBtn" class="btn btn-primary" type="button">
-              Generate Outline
-            </button>
-          </div>
-
-          <div id="outlineStatus" class="ai-status" aria-live="polite">
-            Generate a compact outline summary, then open the full outline only when you need it.
-          </div>
-
-          <div id="outlineResult" class="ai-result ai-result-compact ai-compact-card" hidden>
-            <span class="ai-result-label">Outline ready</span>
-            <div id="outlineSummary" class="ai-result-summary ai-result-summary-short">
-              Smart outline generated and ready to review.
-            </div>
-            <button id="viewOutlineBtn" class="btn btn-secondary ai-view-btn" type="button">
-              View Full Outline
-            </button>
-          </div>
+    <!-- TAB: STATS -->
+    <div class="tab-panel" id="tab-stats">
+      <div class="slabel">Ebook Statistics</div>
+      <div class="stats-grid">
+        <div class="stat-card tilt-card"><div class="stat-value" id="stat-words">0</div><div class="stat-label">Words</div></div>
+        <div class="stat-card tilt-card"><div class="stat-value" id="stat-chapters">0</div><div class="stat-label">Chapters</div></div>
+        <div class="stat-card tilt-card"><div class="stat-value" id="stat-pages">0</div><div class="stat-label">Pages</div></div>
+        <div class="stat-card tilt-card"><div class="stat-value" id="stat-reading">0m</div><div class="stat-label">Read Time</div></div>
+      </div>
+      <div class="divider" style="margin:6px 0"></div>
+      <div class="slabel">Writing Goal</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-label-row">
+          <span class="progress-label">50,000 word goal</span>
+          <span class="progress-label" id="prog-pct">0%</span>
         </div>
-
-        <div class="panel-section compact ai-panel-section ai-writing-section">
-          <div class="mini-label">AI writing assistant</div>
-          <p>
-            Ask for real writing help on any topic or niche — chapters, introductions, blurbs, sections, or fresh draft ideas.
-          </p>
-
-          <label class="ai-field-label" for="writingPrompt">What should it write?</label>
-          <textarea
-            id="writingPrompt"
-            class="ai-textarea"
-            rows="4"
-            placeholder="Example: Write a 6 chapter ebook on skincare for beginners. Or: write an introduction for a Christian healing book."
-            aria-label="Writing prompt"
-          ></textarea>
-
-          <div class="ai-grid-controls ai-grid-controls-single">
-            <select id="writingMode" class="ai-select" aria-label="Writing mode">
-              <option value="auto" selected>Auto detect request</option>
-              <option value="ebook">Write ebook chapters</option>
-              <option value="chapter">Write one chapter section</option>
-              <option value="intro">Write an introduction</option>
-              <option value="blurb">Write a book blurb</option>
-              <option value="continue">Continue current draft</option>
-              <option value="new_chapter">Add new chapter</option>
-              <option value="expand">Expand selected text</option>
-            </select>
-          </div>
-
-          <div class="ai-action-row">
-            <button id="generateWritingBtn" class="btn btn-primary" type="button">
-              Generate Writing
-            </button>
-          </div>
-
-          <div id="writingStatus" class="ai-status" aria-live="polite">
-            Ask the assistant to write on any topic, and review it before sending it into the editor.
-          </div>
-
-          <div id="writingResult" class="ai-result ai-result-compact ai-compact-card" hidden>
-            <span class="ai-result-label">Draft ready</span>
-            <div id="writingSummary" class="ai-result-summary ai-result-summary-short">
-              Fresh writing generated and ready to review.
-            </div>
-            <button id="viewWritingBtn" class="btn btn-secondary ai-view-btn" type="button">
-              View Full Draft
-            </button>
-          </div>
+        <div class="progress-track"><div class="progress-fill" id="prog-fill"></div></div>
+      </div>
+      <div class="divider" style="margin:6px 0"></div>
+      <div class="slabel">Storage</div>
+      <div class="stat-card" style="text-align:left;padding:11px">
+        <div style="font-size:12px;color:var(--text2);line-height:1.9">
+          <div>💾 Last saved: <span id="stat-lastsaved" style="color:var(--cyan)">Never</span></div>
+          <div>📦 Storage used: <span id="stat-storage" style="color:var(--blue)">0 KB</span></div>
         </div>
+      </div>
+    </div>
+  </aside>
 
-        <div class="panel-section compact">
-          <div class="mini-label">Publishing</div>
-          <p>
-            Free publish creates a public reading link instantly. Custom link is
-            available below.
-          </p>
-        </div>
-
-        <div class="panel-section compact">
-          <div class="mini-label">Export</div>
-          <p>
-            PDF export includes the PeeyashBooks watermark. Real payment
-            collection requires Paystack or Flutterwave integration.
-          </p>
-        </div>
-      </aside>
-
-      <section class="editor-workspace reveal-up">
-        <div class="toolbar-shell">
-          <div id="toolbar">
-  <span class="ql-formats">
-    <select class="ql-font">
-      <option selected value="sans-serif"></option>
-      <option value="serif"></option>
-      <option value="monospace"></option>
-    </select>
-
-    <select class="ql-size">
-      <option value="small"></option>
-      <option selected></option>
-      <option value="large"></option>
-      <option value="huge"></option>
-    </select>
-
-    <select class="ql-header">
-      <option selected value=""></option>
-      <option value="1"></option>
-      <option value="2"></option>
-    </select>
-  </span>
-
-  <span class="ql-formats">
-    <button class="ql-bold"></button>
-    <button class="ql-italic"></button>
-    <button class="ql-underline"></button>
-  </span>
-
-  <span class="ql-formats">
-    <button class="ql-list" value="ordered"></button>
-    <button class="ql-list" value="bullet"></button>
-    <button class="ql-blockquote"></button>
-  </span>
-
-  <span class="ql-formats">
-    <button class="ql-link"></button>
-    <button class="ql-clean"></button>
-  </span>
+  <!-- EDITOR AREA -->
+  <main id="editor-area">
+    <div class="editor-topbar">
+      <div class="chapter-breadcrumb">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        <span id="breadcrumb-ch" class="active-ch-name">Select a chapter</span>
+      </div>
+      <div class="tbspace"></div>
+      <button class="btn btn-ghost btn-sm focus-mode-btn" id="btn-focus-mode" title="Focus Mode (F)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+        Focus
+      </button>
+      <div class="word-live">Words: <span id="live-word-count">0</span></div>
+    </div>
+    <div class="editor-scroll" id="editor-scroll">
+      <div id="editor-container" class="fade-in">
+        <div id="quill-editor"></div>
+      </div>
+    </div>
+  </main>
 </div>
-        <div class="editor-shell section-card">
-          <div id="editor"></div>
-        </div>
 
-        <div class="editor-helper">
-          Helpful tip: add a strong title and author name so your published
-          reader page feels complete.
+<!-- ============================================================
+     MODAL: EXPORT
+     ============================================================ -->
+<div class="modal-overlay" id="modal-export">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Export Ebook as PDF</div>
+      <button class="modal-close" data-close="modal-export">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="payment-notice">
+        <span class="pn-icon">💳</span>
+        <span>A one-time fee of <strong>₦200</strong> per export via Flutterwave.</span>
+      </div>
+      <div>
+        <div class="modal-section-title">PDF Options</div>
+        <div class="export-checkbox-group">
+          <label><input type="checkbox" id="opt-cover" checked> Include Cover Page</label>
+          <label><input type="checkbox" id="opt-toc" checked> Include Table of Contents</label>
+          <label><input type="checkbox" id="opt-watermark" checked> Add PeeyashBooks Footer</label>
         </div>
-      </section>
-    </main>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;padding:2px 0">
+        <button class="preview-link" id="btn-preview-before-export">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Preview ebook before exporting
+        </button>
+      </div>
+      <div class="modal-row">
+        <button class="btn btn-ghost" data-close="modal-export">Cancel</button>
+        <button class="btn btn-primary" id="btn-do-export">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Pay ₦200 &amp; Export
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
-    <div id="aiPreviewModal" class="modal hidden" aria-hidden="true">
-      <div class="modal-backdrop" data-close="aiPreviewModal"></div>
-      <div class="modal-card section-card outline-modal-card">
-        <div class="outline-modal-head">
+<!-- ============================================================
+     MODAL: PUBLISH
+     ============================================================ -->
+<div class="modal-overlay" id="modal-publish">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Publish Ebook</div>
+      <button class="modal-close" data-close="modal-publish">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="publish-option">
+        <div class="publish-option-header">
+          <div class="publish-option-icon" style="background:rgba(62,207,207,0.12)">🔗</div>
           <div>
-            <div id="aiPreviewLabel" class="mini-label">AI preview</div>
-            <h3 id="aiPreviewTitle">Review your generated content</h3>
-            <p id="aiPreviewNote">
-              Review everything here first, then insert it into the editor only if it fits your draft.
-            </p>
+            <div class="publish-option-title">Free Publish</div>
+            <div class="publish-option-desc">Auto-generated link — instant, no cost</div>
           </div>
-          <button class="outline-modal-close" type="button" data-close="aiPreviewModal" aria-label="Close AI preview">
-            &times;
-          </button>
         </div>
-
-        <div id="aiPreviewOutput" class="ai-result-body outline-modal-body"></div>
-
-        <div class="modal-actions outline-modal-actions">
-          <button class="btn btn-ghost" data-close="aiPreviewModal">Close</button>
-          <button id="replaceGeneratedBtn" class="btn btn-ghost" type="button">
-            Replace draft
-          </button>
-          <button id="insertGeneratedBtn" class="btn btn-primary" type="button">
-            Insert into editor
+        <div class="publish-option-body">
+          <button class="btn btn-success" id="btn-publish-free" style="width:100%;justify-content:center">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Publish Free
           </button>
         </div>
       </div>
-    </div>
-
-    <div id="toast" class="toast" role="status" aria-live="polite"></div>
-
-    <div id="publishModal" class="modal hidden" aria-hidden="true">
-      <div class="modal-backdrop" data-close="publishModal"></div>
-      <div class="modal-card section-card">
-        <h3>Publish your ebook</h3>
-        <p>
-          Your ebook will go live with a public URL. Leave the custom field
-          empty to use a random slug, or create your own custom link.
-        </p>
-
-        <label
-          class="mini-label"
-          for="customSlugInput"
-          style="display: block; margin-top: 16px"
-        >
-          Custom link <span style="color: #bad2ff">— ₦100</span>
-        </label>
-        <input
-          id="customSlugInput"
-          class="meta-input"
-          type="text"
-          placeholder="my-first-ebook"
-          maxlength="60"
-          aria-label="Custom slug"
-          style="width: 100%"
-        />
-        <p
-          style="
-            margin: 10px 0 0;
-            color: rgba(245, 247, 251, 0.72);
-            line-height: 1.6;
-          "
-        >
-          Leave this empty to publish free with a random slug. Enter a custom
-          link to reserve your own branded URL for
-          <strong style="color: #fff">₦100</strong>.
-        </p>
-
-        <div class="publish-preview">
-          <strong id="publishPreview">/read/your-ebook-slug</strong>
+      <div class="publish-option">
+        <div class="publish-option-header">
+          <div class="publish-option-icon" style="background:rgba(91,115,255,0.12)">✨</div>
+          <div>
+            <div class="publish-option-title">Custom Link — <span style="color:var(--blue)">₦100</span></div>
+            <div class="publish-option-desc">Branded, memorable URL for your ebook</div>
+          </div>
         </div>
-
-        <div class="modal-actions">
-          <button class="btn btn-ghost" data-close="publishModal">
-            Cancel
-          </button>
-          <button id="confirmPublish" class="btn btn-primary">
-            Publish now
+        <div class="publish-option-body">
+          <input type="text" id="custom-slug-input" class="custom-slug-input" placeholder="your-ebook-name" maxlength="40"/>
+          <button class="btn btn-primary" id="btn-publish-custom" style="width:100%;justify-content:center">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Pay ₦100 &amp; Publish Custom Link
           </button>
         </div>
       </div>
-    </div>
-
-    <div id="exportModal" class="modal hidden" aria-hidden="true">
-      <div class="modal-backdrop" data-close="exportModal"></div>
-      <div class="modal-card section-card">
-        <h3>Export your ebook for ₦200</h3>
-        <p>
-          Generate a polished PDF version of your current draft. Your export
-          includes the “Created with PeeyashBooks” footer watermark.
-        </p>
-        <div class="modal-actions">
-          <button class="btn btn-ghost" data-close="exportModal">
-            Not now
-          </button>
-          <button id="confirmExport" class="btn btn-primary">
-            Continue to export
-          </button>
-        </div>
-        <div class="modal-footnote">
-          Live payment gateway not connected yet
-          <span>Connect Paystack or Flutterwave next</span>
-        </div>
+      <div>
+        <div class="modal-section-title">Your Published Link</div>
+        <div class="publish-link-box" id="publish-link-box"></div>
+      </div>
+      <div class="modal-row" id="publish-action-row" style="display:none">
+        <button class="btn btn-ghost" id="btn-copy-link">📋 Copy Link</button>
+        <button class="btn btn-ghost" id="btn-open-reader">🔗 Open Reader</button>
       </div>
     </div>
+  </div>
+</div>
 
-    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="app.js"></script>
-  </body>
+<!-- ============================================================
+     MODAL: PREVIEW
+     ============================================================ -->
+<div class="modal-overlay" id="modal-preview">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <div class="modal-title">Ebook Preview</div>
+      <button class="modal-close" data-close="modal-preview">✕</button>
+    </div>
+    <div class="preview-layout">
+      <div class="preview-book-stage">
+        <div class="book-stage-label">3D Cover Preview</div>
+        <div class="book-3d-wrap">
+          <div class="book-3d" id="preview-3d-book">
+            <div class="book-face book-spine"><span class="spine-title" id="preview-spine-title">My Ebook</span></div>
+            <div class="book-face book-front" id="preview-book-front">
+              <div class="book-front-title" id="preview-book-title">Your Ebook Title</div>
+              <div class="book-front-line"></div>
+              <div class="book-front-author" id="preview-book-author">Author Name</div>
+            </div>
+            <div class="book-face book-back"></div>
+          </div>
+        </div>
+        <div class="book-shadow"></div>
+        <div style="font-size:10px;color:var(--text3);text-align:center;margin-top:4px">Hover to rotate</div>
+      </div>
+      <div class="preview-body-wrap"><div id="preview-body"></div></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+      <button class="btn btn-ghost" data-close="modal-preview">Close</button>
+      <button class="btn btn-primary" id="btn-preview-to-export">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export as PDF
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: SHOWCASE
+     ============================================================ -->
+<div class="modal-overlay" id="modal-showcase">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <div class="modal-title">📚 Book Showcase &amp; Marketplace</div>
+      <button class="modal-close" data-close="modal-showcase">✕</button>
+    </div>
+    <div class="showcase-layout">
+      <div class="showcase-book-stage">
+        <div class="book-stage-label">Your Book in 3D</div>
+        <div class="book-3d-wrap">
+          <div class="book-3d" id="showcase-3d-book">
+            <div class="book-face book-spine"><span class="spine-title" id="showcase-spine-title">My Ebook</span></div>
+            <div class="book-face book-front" id="showcase-book-front">
+              <div class="book-front-title" id="showcase-book-title">Your Ebook Title</div>
+              <div class="book-front-line"></div>
+              <div class="book-front-author" id="showcase-book-author">Author Name</div>
+            </div>
+            <div class="book-face book-back"></div>
+          </div>
+        </div>
+        <div class="book-shadow"></div>
+        <div style="font-size:9px;color:var(--text3);text-align:center;margin-top:4px">Hover to rotate</div>
+        <div style="font-size:11px;color:var(--text3);text-align:center;line-height:1.5;margin-top:8px">
+          Upload a cover in<br><strong style="color:var(--text2)">Design tab</strong>
+        </div>
+      </div>
+      <div id="showcase-info">
+        <div style="color:var(--text3);font-size:13px;padding:16px 0">Loading your book…</div>
+      </div>
+    </div>
+    <div class="sc-listings-section">
+      <div class="sc-listings-section-title">Your Listed Books</div>
+      <div id="sc-listings-grid"><div class="sc-empty">No books listed yet.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<script src="app.js"></script>
+</body>
 </html>
